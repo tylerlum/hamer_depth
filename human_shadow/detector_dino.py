@@ -1,9 +1,9 @@
 """
 Wrapper around DINO for object detection
 """
-
+import os
 import pdb
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import numpy as np
 
 from transformers import pipeline
@@ -11,7 +11,8 @@ from PIL import Image
 import mediapy as media
 import cv2
 
-from utils.image_utils import DetectionResult
+from human_shadow.utils.image_utils import DetectionResult
+from human_shadow.utils.file_utils import get_parent_folder_of_package
 
 class DetectorDino:
     def __init__(self, detector_id: str):
@@ -23,13 +24,13 @@ class DetectorDino:
 
 
     def get_bboxes(self, frame: np.ndarray, object_name: str, threshold: float = 0.4, 
-                   visualize: bool = False) -> List[np.ndarray]:
+                   visualize: bool = False, visualize_wait: bool = True) -> Tuple[List[np.ndarray], List[np.float32]]:
         img_pil = Image.fromarray(frame)
         labels = [f"{object_name}."]
         results = self.detector(img_pil, candidate_labels=labels, threshold=threshold)
         results = [DetectionResult.from_dict(result) for result in results]
         if not results:
-            return None
+            return [], []
         bboxes = [np.array(result.box.xyxy) for result in results]
         scores = [result.score for result in results]
 
@@ -53,12 +54,15 @@ class DetectorDino:
                             2,
                             cv2.LINE_AA)
             cv2.imshow("Detection", img_bgr)
-            cv2.waitKey(0)
+            if visualize_wait:
+                cv2.waitKey(0)
+            else:
+                cv2.waitKey(1)
         return bboxes, scores
 
 
     def get_best_bbox(self, frame: np.ndarray, object_name: str, threshold: float = 0.4, 
-               visualize: bool = False) -> Tuple[np.ndarray, np.ndarray[np.int32]]:
+               visualize: bool = False, visualize_wait: bool = True) -> Optional[np.ndarray]:
         bboxes, scores = self.get_bboxes(frame, object_name, threshold)
         if len(bboxes) == 0:
             return None
@@ -84,16 +88,22 @@ class DetectorDino:
                     2,
                     cv2.LINE_AA)
             cv2.imshow("Detection", img_bgr)
-            cv2.waitKey(0)
+            if visualize_wait:
+                cv2.waitKey(0)
+            else:
+                cv2.waitKey(1)
         return best_bbox
     
     
-
-
 if __name__ == "__main__":
-    img_path = "data/demo/00000.jpg"
-    frame = media.read_image(img_path)
+    root_folder = get_parent_folder_of_package("human_shadow")
     detector_id = "IDEA-Research/grounding-dino-tiny"
     detector = DetectorDino(detector_id)
-    # detector.get_best_bbox(frame, "hand", visualize=True)
-    detector.get_bboxes(frame, "hand", visualize=True)
+
+    indices = np.arange(13, 40)
+    for idx in indices:
+        img_path = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L/000{idx}.jpg")
+
+        frame = media.read_image(img_path)
+        # detector.get_best_bbox(frame, "hand", visualize=True)
+        detector.get_bboxes(frame, "hand", visualize=True, visualize_wait=False)

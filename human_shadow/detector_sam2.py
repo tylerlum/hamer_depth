@@ -5,18 +5,20 @@ Wrapper around SAM2 for object segmentation
 import pdb
 import numpy as np
 import os 
-from typing import Tuple
+from typing import Tuple, Optional
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import cv2
 from PIL import Image
+import mediapy as media
 import torch
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 from sam2.build_sam import build_sam2_video_predictor
 
-from detector_dino import DetectorDino
+from human_shadow.detector_dino import DetectorDino
+from human_shadow.utils.file_utils import get_parent_folder_of_package
 
 class DetectorSam2:
     def __init__(self):
@@ -25,8 +27,10 @@ class DetectorSam2:
         self.image_predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint, device="cuda"))
         self.video_predictor = build_sam2_video_predictor(model_cfg, checkpoint, device="cuda")
 
-    def segment_frame(self, frame: np.ndarray, positive_pts: np.ndarray=None, negative_pts: np.ndarray=None, 
-                      bbox_pts: np.ndarray=None, multimask_output: bool=True, visualize:bool =False) -> Tuple[np.ndarray, np.ndarray]:
+    def segment_frame(self, frame: np.ndarray, positive_pts: Optional[np.ndarray]=None,
+                      negative_pts: Optional[np.ndarray]=None,
+                      bbox_pts: Optional[np.ndarray]=None, multimask_output: bool=True, 
+                      visualize: bool=False) -> Tuple[np.ndarray, np.ndarray]:
         img = frame.copy()
         if positive_pts is not None and negative_pts is not None:
             point_coords = np.concatenate([positive_pts, negative_pts], axis=0)
@@ -54,7 +58,7 @@ class DetectorSam2:
             
         return masks, scores
     
-    def segment_video(self, video_dir: str, bbox_ctr: np.ndarray, visualize: bool=False) -> None:
+    def segment_video(self, video_dir: str, bbox_ctr: np.ndarray, visualize: bool=False, start_idx: int=0) -> None:
         frame_names = os.listdir(video_dir)
         frame_names = sorted(frame_names)
         with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
@@ -64,7 +68,7 @@ class DetectorSam2:
             for obj_id, point in enumerate([bbox_ctr]):
                 self.video_predictor.add_new_points_or_box(
                     state,
-                    frame_idx=0,
+                    frame_idx=start_idx,
                     obj_id=obj_id,
                     points=np.array([point]),
                     labels=np.array([1], np.int32),
@@ -83,15 +87,21 @@ class DetectorSam2:
 
         if visualize:
             vis_frame_stride = 30
-            for out_frame_idx in range(0, len(frame_names), vis_frame_stride):
-                plt.figure(figsize=(6, 4))
-                plt.title(f"frame {out_frame_idx}")
-                plt.imshow(Image.open(os.path.join(video_dir, frame_names[out_frame_idx])))
-                for out_obj_id, out_mask in video_segments[out_frame_idx].items():
-                    DetectorSam2.show_video_mask(out_mask, plt.gca(), obj_id=out_obj_id)
+            frame_indices = list(video_segments.keys())
+            frame_indices.sort()
+            # for out_frame_idx in range(0, len(frame_names), vis_frame_stride):
+            list_annotated_imgs = []
+            for out_frame_idx in frame_indices:
+                img = Image.open(os.path.join(video_dir, frame_names[out_frame_idx]))
+                img_arr = np.array(img)
+                mask = video_segments[out_frame_idx][0]
+                img_arr[mask[0]] = (0, 0, 0)
+                list_annotated_imgs.append(img_arr)
+            media.write_video("annotated_sam.mp4", list_annotated_imgs, fps=10)
+            
 
     @staticmethod
-    def show_video_mask(mask: np.ndarray, ax: Axes, obj_id: int=None, random_color: bool=False) -> None:
+    def show_video_mask(mask: np.ndarray, ax: Axes, obj_id: Optional[int]=None, random_color: bool=False) -> None:
         if random_color:
             color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
         else:
@@ -123,8 +133,8 @@ class DetectorSam2:
 
 
     @staticmethod
-    def show_masks(image: np.ndarray, masks: np.ndarray, scores: np.ndarray, point_coords: np.ndarray=None, 
-                   box_coords: np.ndarray=None, input_labels: np.ndarray=None, borders: bool=True) -> None:
+    def show_masks(image: np.ndarray, masks: np.ndarray, scores: np.ndarray, point_coords: Optional[np.ndarray]=None, 
+                   box_coords: Optional[np.ndarray]=None, input_labels: Optional[np.ndarray]=None, borders: bool=True) -> None:
         n_masks = len(masks)
         fig, axs = plt.subplots(1, n_masks, figsize=(10*n_masks, 10))
         for i, (mask, score) in enumerate(zip(masks, scores)):
@@ -160,16 +170,31 @@ class DetectorSam2:
 
 
 if __name__ == "__main__":
-    img_path = "data/demo/00000.jpg"
-    frame_bgr = cv2.imread(img_path)
-    frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-
-    # Get bbox 
+    root_folder = get_parent_folder_of_package("human_shadow")
     detector_id = "IDEA-Research/grounding-dino-tiny"
     detector = DetectorDino(detector_id)
-    bbox = detector.get_best_bbox(frame, "hand")
-    bbox_center = np.mean(np.reshape(bbox, (2, 2)), axis=0)
-
     segmentor = DetectorSam2()
-    # segmentor.segment_frame(frame, bbox_pts=bbox, visualize=True)
-    segmentor.segment_video("data/demo", bbox_ctr=bbox_center, visualize=True)
+
+    # # Frame by frame
+    # indices = np.arange(13, 40)
+    # for idx in indices:
+    #     video_folder = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L")
+    #     img_path = os.path.join(root_folder, video_folder, f"000{idx}.jpg")
+    #     frame_bgr = cv2.imread(img_path)
+    #     frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    #     bbox = detector.get_best_bbox(frame, "hand")
+    #     bbox_center = np.mean(np.reshape(bbox, (2, 2)), axis=0)
+    #     segmentor.segment_frame(frame, bbox_pts=bbox, visualize=True)
+        
+
+    # Entire video at once
+    # TODO: why does this fail when start_idx=13??
+    idx = 13
+    video_folder = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L")
+    img_path = os.path.join(root_folder, video_folder, f"000{idx}.jpg")
+    frame_bgr = cv2.imread(img_path)
+    frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    bbox = detector.get_best_bbox(frame, "hand")
+    if bbox is not None:
+        bbox_center = np.mean(np.reshape(bbox, (2, 2)), axis=0)
+        segmentor.segment_video(video_folder, bbox_ctr=bbox_center, visualize=True, start_idx=15)

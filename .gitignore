@@ -1,4 +1,15 @@
 __pycache__
 
-data/*
-outputs/*
+*/data/*
+*/outputs/*
+_DATA/*
+
+*.mypy_cache
+*.vscode
+.*
+
+*.pkl
+*.mp4
+*.gif
+*.jpg
+*.egg-info

@@ -15,7 +15,7 @@ import hamer
 from hamer.utils.utils_detectron2 import DefaultPredictor_Lazy
 from detectron2.config import LazyConfig
 
-from utils.file_utils import get_parent_folder_of_package
+from human_shadow.utils.file_utils import get_parent_folder_of_package
 
 
 def download_detectron_ckpt(root_dir: str, ckpt_path: str) -> None:
@@ -30,7 +30,6 @@ def download_detectron_ckpt(root_dir: str, ckpt_path: str) -> None:
         print(f"File downloaded successfully and saved to {save_path}")
     else:
         print(f"Failed to download the file. Status code: {response.status_code}")
-
 
 
 class DetectorDetectron2:
@@ -49,7 +48,8 @@ class DetectorDetectron2:
             detectron2_cfg.model.roi_heads.box_predictors[i].test_score_thresh = 0.25
         self.detectron2 = DefaultPredictor_Lazy(detectron2_cfg)
 
-    def get_bboxes(self, img: np.ndarray, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray]:
+    def get_bboxes(self, img: np.ndarray, visualize: bool=False, 
+                   visualize_wait: bool=True) -> Tuple[np.ndarray, np.ndarray]:
         """ Get bounding boxes and scores for the detected hand in the image """
         det_out = self.detectron2(img)
 
@@ -79,15 +79,19 @@ class DetectorDetectron2:
                             cv2.LINE_AA)
 
             cv2.imshow(f"Detected bounding boxes", img_bgr)
-            cv2.waitKey(0)
+            if visualize_wait:
+                cv2.waitKey(0)
+            else:
+                cv2.waitKey(1)
 
         return pred_bboxes, pred_scores
     
-    def get_best_bbox(self, img: str, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray]:
+    def get_best_bbox(self, img: np.ndarray, visualize: bool=False, 
+                      visualize_wait: bool=True) -> Tuple[np.ndarray, float]:
         """ Get the best bounding box and score for the detected hand in the image """
         bboxes, scores = self.get_bboxes(img)
         if len(bboxes) == 0:
-            return None
+            return np.ndarray([]), 0
         best_idx = scores.argmax()
         best_bbox, best_score = bboxes[best_idx], scores[best_idx]
 
@@ -111,16 +115,22 @@ class DetectorDetectron2:
                         cv2.LINE_AA)
 
             cv2.imshow(f"Best detected bounding box", img_bgr)
-            cv2.waitKey(0)
+            if visualize_wait:
+                cv2.waitKey(0)
+            else:
+                cv2.waitKey(1)
         
         return best_bbox, best_score
                 
 
 if __name__ == "__main__":
-    img_path = "data/demo/00000.jpg"
-    frame = media.read_image(img_path)
-    root_dir = get_parent_folder_of_package("hamer") 
-    detector = DetectorDetectron2(root_dir=root_dir)
-    # detector.get_best_bbox(frame, visualize=True)
-    detector.get_bboxes(frame, visualize=True)
+    root_folder = get_parent_folder_of_package("human_shadow")
+    detector = DetectorDetectron2(root_dir=root_folder)
+    indices = np.arange(13, 40)
+    for idx in indices:
+        img_path = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L/000{idx}.jpg")
 
+        frame = media.read_image(img_path)
+
+        # detector.get_best_bbox(frame, visualize=True)
+        detector.get_bboxes(frame, visualize=True, visualize_wait=False)

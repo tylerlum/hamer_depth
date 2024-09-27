@@ -225,9 +225,13 @@ class DetectorHamer:
         kpts_3d = kpts_3d.clone().cuda()
         rotation = rotation.cuda()
 
-        scaled_focal_length = torch.tensor([scaled_focal_length, scaled_focal_length]).reshape(1, 2)
+        scaled_focal_length = torch.tensor([scaled_focal_length, scaled_focal_length]).reshape(1, 2) # 43125
 
-        camera_center = torch.tensor([img_w, img_h], dtype=torch.float).reshape(1, 2) / 2.0
+        camera_center = torch.tensor([img_w, img_h], dtype=torch.float).reshape(1, 2) / 2.0 # 1104, 621
+
+        # Tcam tensor([ 0.1076, -0.0526, 15.4407], device='cuda:0')
+
+        pdb.set_trace()
         kpts_2d = perspective_projection(
             kpts_3d.reshape(batch_size, -1, 3),
             rotation=rotation.repeat(batch_size, 1, 1),
@@ -290,7 +294,7 @@ class DetectorHamer:
 
 
 if __name__ == "__main__":
-    img_path = "data/demo/00000.jpg"
+    img_path = "data/videos/demo1/video_0_L/00013.jpg"
     img = media.read_image(img_path)
     detector = DetectorHamer()
     detector.detect_hand_keypoints(img, visualize=True)
