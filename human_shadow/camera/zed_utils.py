@@ -2,6 +2,22 @@ import pyzed.sl as sl
 import numpy as np
 import json
 
+def capture_camera_data(zed, depth_mode, img_left, img_right, depth_img): 
+    zed.retrieve_image(img_left, sl.VIEW.LEFT, sl.MEM.CPU)
+    zed.retrieve_image(img_right, sl.VIEW.RIGHT, sl.MEM.CPU)
+    if not depth_mode == "NONE":
+        if not depth_mode == "TRI": 
+            zed.retrieve_measure(depth_img, sl.MEASURE.DEPTH, sl.MEM.CPU)
+
+    # RGB image
+    img_left_bgr = img_left.get_data()[:,:,:3]
+    img_left_rgb = img_left_bgr[...,::-1] # bgr to rgb
+    img_right_bgr = img_right.get_data()[:,:,:3]
+    img_right_rgb = img_right_bgr[...,::-1] # bgr to rgb
+    depth_img_arr = depth_img.get_data()
+    
+    return img_left_rgb, img_right_rgb, depth_img_arr
+
 def save_intrinsics(camera_params, save_path: str=None):
     """Save intrinsics of left and right camera in json"""
     both_params = {
@@ -45,6 +61,29 @@ def get_intrinsics_matrix(camera_params, cam_side: str="left"):
     )
 
     return K
+
+def get_intrinsics_from_json(json_path: str):
+    with open(json_path, "r") as f:
+        camera_intrinsics = json.load(f)
+
+    # Get camera matrix 
+    fx = camera_intrinsics["left"]["fx"]
+    fy = camera_intrinsics["left"]["fy"]
+    cx = camera_intrinsics["left"]["cx"]
+    cy = camera_intrinsics["left"]["cy"]
+    camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+
+    return camera_matrix
+
+
+def get_camera_params(zed):
+    camera_model = zed.get_camera_information().camera_model
+    camera_params = (
+        zed.get_camera_information().camera_configuration.calibration_parameters
+    )
+    K_left = get_intrinsics_matrix(camera_params, cam_side="left")
+    K_right = get_intrinsics_matrix(camera_params, cam_side="right")
+    return camera_params, K_left, K_right
 
 def init_zed(resolution: str, depth_mode: str):
     """Initialize Zed Camera"""
