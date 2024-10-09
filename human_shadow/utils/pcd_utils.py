@@ -68,7 +68,7 @@ def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registr
         estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint())
     
     if np.array_equal(init_transform, result_icp.transformation):
-        print('yes')
+        print('Use global registration')
         try:
             result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
         except:
