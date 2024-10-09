@@ -19,6 +19,9 @@ matplotlib.use('agg')
 from tqdm import tqdm
 
 def get_transition(vertex_idx_list, mesh, visible_points_3d):
+    '''
+    Get the initial global transition between hamer prediction and point cloud
+    '''
     index = np.arange(0, len(vertex_idx_list))
     verts_indx = vertex_idx_list[index]
     trans = []
@@ -35,6 +38,9 @@ def get_transition(vertex_idx_list, mesh, visible_points_3d):
     return transition
 
 def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrinsics):
+    '''
+    Get hand pose
+    '''
     fx = intrinsics["left"]["fx"]
     img_rgb = image.copy()
     img_bgr = img_rgb[..., ::-1]
@@ -54,10 +60,13 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     # Segment hand
     masks, scores, img_arr = segmentor.segment_frame(img_rgb, positive_pts=kpts_2d.astype(np.int32), bbox_pts=bbox, visualize=False)
 
-    
+    # Initial transform for pcd
     init_transform = np.eye(4)
 
+    # Get segmented out pcd
     pcd = get_point_cloud_of_segmask(masks[2], depth, img_rgb, intrinsics["left"], visualize=False)
+    
+    # mesh faces
     faces = detector_hamer.faces
     faces_new = np.array([[92, 38, 234],
                         [234, 38, 239],
@@ -75,13 +84,26 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
                         [78, 108, 79]])
     faces = np.concatenate([faces, faces_new], axis=0)
 
+    # Initialize mesh and camera position
     mesh = trimesh.Trimesh(verts.copy(), faces.copy())
     camera_position = np.array([0,0,0])
+
+    # Get visible vertices
     visible_points, visible_vertex_indices = get_visible_points(mesh, camera_position)
     visible_points = visible_points.astype(np.float32)
+
+    # Get pcd of visible vertices of original hamer hand
+    visible_pcd = get_pcd_from_points(visible_points, colors=np.ones_like(visible_points) * [0, 1, 0])
+    if len(visible_pcd.points) == 0:
+       print('Failed!')
+       return None, None, None, None, None
+
+    # Project visible vertices to 2d
     visible_points_2d = detector_hamer.project_3d_kpt_to_2d((visible_points-T_cam_pred.cpu().numpy()).astype(np.float32), img_w, img_h, scaled_focal_length, 
                                                         camera_center, T_cam_pred)
     visible_points_2d = np.rint(visible_points_2d).astype(np.int32)
+    
+    # Get the new visible vertices 3d by lifting 2d visible vertices to 3d using depth
     visible_points_3d = []
     vertex_idx_list = []
     for vertex_idx, pt_2d in enumerate(visible_points_2d):
@@ -93,29 +115,36 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     if len(vertex_idx_list) == 0:
         print('Failed!')
         return
+    
+    # Get the pcd of new visible vertices in 3d
     pcd_visible_points_3d = get_pcd_from_points(visible_points_3d, colors=np.ones_like(visible_points_3d) * [0,1,0])
+    # Remove outliers
     pcd_visible_points_3d, outlier_indices = remove_outliers(pcd_visible_points_3d, radius=0.01, min_neighbors=5)
 
+    # Obtain the global transition of the predicted hand using the lifted visible vertices
     transition = get_transition(vertex_idx_list, mesh, visible_points_3d)
-
-    visible_pcd = get_pcd_from_points(visible_points, colors=np.ones_like(visible_points) * [0, 1, 0])
-    if len(visible_pcd.points) == 0:
-       print('Failed!')
-       return None, None, None, None, None
     
+    # Use the global transition obtaned above as the initial transform for ICP
     if not np.isnan(np.sum(transition)):
         init_transform[:3, 3] = transition.reshape(3,)
+
+    # Do ICP between the pcd of the original hamer hand visible vertices and pcd of the segmented out hand.
     aligned_hamer_pcd, transformation = icp_registration(visible_pcd, pcd, voxel_size=0.005,init_transform=init_transform)
     if transformation is None:
         print('Failed!')
         return None, None, None, None, None
 
+    # Get the pcd of whole hamer predicted vertices
     all_pcd = get_pcd_from_points(mesh.vertices, colors=np.ones_like(mesh.vertices) * [0, 1, 0])
+    # Apply the transformation obtained from ICP
     all_pcd = all_pcd.transform(transformation)
 
+    # Get the thumb tip, middle finger tip and control point
     thumb_tip_points = [mesh.vertices[756]]
     middle_tip_points = [mesh.vertices[455]]
     tip_points_control = [(mesh.vertices[756] + mesh.vertices[455])/2]
+
+    # Apply the transformation obtained from ICP
     thumb_tip_points = get_pcd_from_points(thumb_tip_points, colors=np.ones_like(thumb_tip_points) * [1, 0, 0])
     thumb_tip_points = thumb_tip_points.transform(transformation)
     middle_tip_points = get_pcd_from_points(middle_tip_points, colors=np.ones_like(middle_tip_points) * [1, 0, 0])
