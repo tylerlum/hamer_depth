@@ -48,14 +48,15 @@ def global_registration(source_pcd, target_pcd, voxel_size):
     return result_ransac
 
 
-def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registration=True):
+def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registration=True, init_transform=None, transition=None):
     """
     Register two point clouds using ICP algorithm. 
     """
     # Optional global registration using RANSAC
     if use_global_registration:
-        result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
-        init_transform = result_ransac.transformation
+        if init_transform is None:
+            result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
+            init_transform = result_ransac.transformation
     else:
         init_transform = np.eye(4)
     
@@ -65,6 +66,19 @@ def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registr
         source=source_pcd, target=target_pcd, max_correspondence_distance=max_correspondence_distance, 
         init=init_transform,
         estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint())
+    
+    if np.array_equal(init_transform, result_icp.transformation):
+        print('yes')
+        try:
+            result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
+        except:
+            return source_pcd, None
+        init_transform = result_ransac.transformation
+        # init_transform = (transition+init_transform)/2
+        result_icp = o3d.pipelines.registration.registration_icp(
+            source=source_pcd, target=target_pcd, max_correspondence_distance=max_correspondence_distance, 
+            init=init_transform,
+            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint())
     
     aligned_source_pcd = source_pcd.transform(result_icp.transformation)
 
@@ -83,7 +97,7 @@ def get_visible_points(mesh, origin):
     visible_triangles = mesh.faces[visible_triangle_indices]
     visible_vertex_indices = np.unique(visible_triangles)
     visible_points = pts[visible_vertex_indices]
-    return visible_points
+    return visible_points, visible_vertex_indices
 
 
 def get_pcd_from_points(points, colors=None):
@@ -98,19 +112,27 @@ def get_pcd_from_points(points, colors=None):
     return pcd
 
 
-def visualize_pcds(list_pcds):
+def visualize_pcds(list_pcds, visible=True):
     """
     Visualize a list of point clouds.
     """
+    visualization_image = None
     vis = o3d.visualization.Visualizer()
-    vis.create_window()
+    vis.create_window(visible=visible)
     opt = vis.get_render_option()
     opt.background_color = np.asarray([0.2, 0.2, 0.2])
     for pcd in list_pcds:
         vis.add_geometry(pcd)
+    vis.poll_events()
     vis.update_renderer()
-    vis.run()
+    if not visible:
+        visualization_image = vis.capture_screen_float_buffer(do_render=True)
+        visualization_image = (255.0 * np.asarray(visualization_image)).astype(np.uint8)
+    if visible:
+        vis.run()
     vis.destroy_window()
+    return visualization_image
+
 
 
 def radius_outlier_detection(points, radius=5, min_neighbors=5):
@@ -142,7 +164,7 @@ def remove_outliers(pcd, radius=5, min_neighbors=5):
     filtered_pts = np.asarray(pcd.points)[~outlier_indices]
     filtered_colors = np.asarray(pcd.colors)[~outlier_indices]
     filtered_pcd = get_pcd_from_points(filtered_pts, colors=filtered_colors)
-    return filtered_pcd
+    return filtered_pcd, outlier_indices
 
 
 def get_3D_point_from_pixel(px, py, depth, intrinsics):

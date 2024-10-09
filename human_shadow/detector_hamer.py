@@ -45,22 +45,23 @@ class DetectorHamer:
         self.cpm = ViTPoseModel(self.device)
 
         # Load bounding box detectors
-        self.dino_detector = DetectorDino("IDEA-Research/grounding-dino-tiny")
+        self.dino_detector = DetectorDino("IDEA-Research/grounding-dino-base")
         self.detectron_detector = DetectorDetectron2(root_dir)
-
         self.faces = self.model.mano.faces
         self.renderer = Renderer(self.model_cfg, faces=self.model.mano.faces)
 
 
-    def detect_hand_keypoints(self, img: np.ndarray, 
-                              visualize: bool=False, visualize_3d: bool=False, visualize_wait: bool=True,
+    def detect_hand_keypoints(self, img: np.ndarray, frame_idx, 
+                              visualize: bool=False, visualize_3d: bool=False, visualize_wait: bool=True, path:str=None,
                               camera_params: Optional[dict]=None) -> Tuple[np.ndarray, bool, Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
         """
         Detect the hand keypoints in the image.
         """
         bboxes, is_right = self.get_bboxes_for_hamer(img)
+        if bboxes is None:
+            return img, False, None, None, None, None, None, None, None, None, None
         if len(bboxes) == 0:
-            return img, False, None, None, None
+            return img, False, None, None, None, None, None, None, None, None, None
         
         scaled_focal_length, camera_center = self.get_image_params(img, camera_params)
 
@@ -80,6 +81,7 @@ class DetectorHamer:
                 kpts_3d = out["pred_keypoints_3d"][idx].detach().cpu().numpy()  # [21, 3]
                 verts = out["pred_vertices"][idx].detach().cpu().numpy()  # [778, 3]
                 is_right = batch["right"][idx].cpu().numpy()
+                global_orient = out["pred_mano_params"]["global_orient"][idx].detach().cpu().numpy()
 
                 T_cam_pred = T_cam_pred_all[idx]
 
@@ -105,16 +107,17 @@ class DetectorHamer:
             img=img,
         )
         if visualize:
-            cv2.imshow("Annotated Image", annotated_img)
-            if visualize_wait:
-                cv2.waitKey(0)
-            else:
-                cv2.waitKey(1)
+            cv2.imwrite(os.path.join(path, '%05d.png'%frame_idx), annotated_img)
+            # cv2.imshow("Annotated Image", annotated_img)
+            # if visualize_wait:
+            #     cv2.waitKey(0)
+            # else:
+            #     cv2.waitKey(1)
 
         if visualize_3d:
             DetectorHamer.visualize_keypoints_3d(annotated_img, list_3d_kpts[0], list_verts[0])
 
-        return annotated_img, True, list_3d_kpts[0], list_2d_kpts[0], list_verts[0]
+        return annotated_img, True, list_3d_kpts[0], list_2d_kpts[0], list_verts[0], T_cam_pred_all[0], scaled_focal_length, camera_center, W_H_shapes[0][0], W_H_shapes[0][1], global_orient[0]
     
 
     def get_image_params(self, img: np.ndarray, camera_params: Optional[dict]) -> Tuple[float, torch.Tensor]:
@@ -198,8 +201,9 @@ class DetectorHamer:
         bboxes, is_right = DetectorHamer.sort_bboxes(bboxes, is_right, idx_to_confidence)
 
         if len(bboxes) == 0:
-            return np.ndarray([]), np.ndarray([])
-        
+            return None, None
+        bboxes = bboxes[is_right]
+        is_right = is_right[is_right == True]
         return bboxes, is_right
 
     
@@ -208,8 +212,9 @@ class DetectorHamer:
         """
         Get bounding boxes around the hands using the Dino or Detectron detectors
         """
+        # img = img[81:1161, 144:2064, :]
         if use_dino:
-            dino_bboxes, dino_scores = self.dino_detector.get_bboxes(img, "hand", visualize=visualize)
+            dino_bboxes, dino_scores = self.dino_detector.get_bboxes(img, "hand", threshold=0.2, visualize=visualize)
 
         if use_detectron:
             det_bboxes, det_scores = self.detectron_detector.get_bboxes(img, visualize=visualize)
@@ -218,7 +223,7 @@ class DetectorHamer:
             bboxes = np.vstack([dino_bboxes, det_bboxes])
             scores = np.concatenate([dino_scores, det_scores])
         elif use_dino and dino_bboxes is not None:
-            bboxes, scores = dino_bboxes, dino_scores
+            bboxes, scores = np.array(dino_bboxes), np.array(dino_scores)
         elif use_detectron and det_bboxes is not None:
             bboxes, scores = det_bboxes, det_scores
 
@@ -409,7 +414,8 @@ class DetectorHamer:
 if __name__ == "__main__":
 
     # Get camera intrinsics
-    root_folder = get_parent_folder_of_package("human_shadow")
+    # root_folder = get_parent_folder_of_package("human_shadow")
+    root_folder = "/juno/u/jyfang/human_shadow"
     camera_intrinsics_path = os.path.join(root_folder, "human_shadow/camera/camera_intrinsics.json")
     with open(camera_intrinsics_path, "r") as f:
         camera_params = json.load(f)
@@ -418,7 +424,7 @@ if __name__ == "__main__":
 
     indices = np.arange(13, 40)
     for idx in indices:
-        img_path = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L/000{idx}.jpg")
+        img_path = os.path.join(root_folder, f"data/videos/demo1/video_0_L/000{idx}.jpg")
         img = media.read_image(img_path)
         detector.detect_hand_keypoints(img, visualize=True, visualize_3d=False, visualize_wait=False)
         # detector.detect_hand_keypoints(img, camera_params=camera_params["left"], visualize=True) # TOD0: understand why real params don't work
