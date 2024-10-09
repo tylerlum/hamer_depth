@@ -1,15 +1,34 @@
-__pycache__
+*__pycache__*
+*/.ipynb_checkpoints/*
+*/.pytest_cache/*
+*/.mypy_cache/*
+*/.vscode/*
+*/.empty/*
+*/.git/*
+*/.gitignore/*
+*/.gitkeep/*
+*/.DS_Store/*
+*/.DS_Store/*
+*/.gitattributes/*
+*/.gitmodules
 
 */data/*
 */outputs/*
 _DATA/*
 
+__pycache__/*
+
 *.mypy_cache
 *.vscode
+*.empty
 .*
 
 *.pkl
 *.mp4
 *.gif
 *.jpg
+*.npy
 *.egg-info
+
+
+**/camera_calibration_data/*

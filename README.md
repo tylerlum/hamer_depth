@@ -16,6 +16,63 @@ python hand_pose.py
 This file contains 4 methods on how to obtain 3D estimates of keypoints on the hand. 
 
 
+## Real robot guide 
+
+### Networking 
+On the Franka Nuc, ensure that 
+* PCI Ethernet is connected to "Internet"
+* USB Ethernet is connected to "FR3"
+
+### Running the franka (on franka nuc)
+1. In window 1, run 
+ ```
+ cd marion/franka-panda.git/bin
+ ./franka_panda_driver ../resources/default.yaml
+```
+2. In window 2, run 
+ ```
+ cd marion/franka-panda.git/bin
+ ./franka_panda_opspace -g robotiq -a iprl
+```
+
+### Running the robotiq gripper (on franka nuc)
+1. In window 1, run 
+ ```
+ cd franka/robotiq-gripper.git/bin
+ ./robotiq_gripper_driver /dev/ttyUSB0
+```
+
+### Camera calibration
+#### Simulation check (on bohg-franka)
+1. In window 1, run  
+ ```
+ conda activate xembodiment
+ cd redis-gl
+./server.py
+```
+2. In window 2, run 
+ ```
+ conda activate xembodiment
+ cd franka-panda/bin
+./franka_panda_opspace --sim -g robotiq
+```
+3. In window 3, run 
+ ```
+ conda activate human_shadow
+ cd human_shadow/camera
+python collect_calibration_data.py --name test --sim --resolution HD2K
+```
+
+#### Real data collection 
+1. Run the franka (see instructions above)
+2. Run the robotiq gripper (see instructions above)
+3. On bohg-franka, run
+ ```
+ conda activate human_shadow
+ cd human_shadow/camera
+python collect_calibration_data.py --name test --resolution HD2K
+```
+
 ### TODO
  - Move data paths to shared folder in /juno/group/human_shadow
  - Add full typing with mypy

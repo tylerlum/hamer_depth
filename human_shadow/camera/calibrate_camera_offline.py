@@ -289,6 +289,13 @@ def main(args):
     else:
         save_dir = None
 
+    # fig, axs = plt.subplots(1, 4)
+
+    # for idx in range(4):
+    #     axs[idx].imshow(data_list[idx]["imgs"][0])
+    # plt.show()
+    # import pdb; pdb.set_trace()
+
     # Get list of data with corner data
     corner_data = get_data_with_corners(data_list, target_idx=0, save_dir=save_dir)
 

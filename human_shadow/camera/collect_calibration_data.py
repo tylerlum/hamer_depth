@@ -13,7 +13,8 @@ import pickle
 from scipy.spatial.transform import Rotation as R
 import json
 
-from human_shadow.config.redis_keys import *
+# from human_shadow.config.redis_keys import *
+from human_shadow.camera.zed_utils import *
 
 from franka_utils.opspace_client import FrankaPanda, decode_matlab
 import franka_utils.traj_utils as t_utils
@@ -48,11 +49,19 @@ def main(args):
         # Franka NUC IP address - to communicate w/ Redis
         robot = FrankaPanda(host="172.24.68.230", password="iprl")
 
-    # Connect to local redis server for Zed
-    _redis = redis.Redis(
-        host=BOHG_FRANKA_HOST, port=BOHG_FRANKA_PORT, password=BOHG_FRANKA_PWD
-    )
-    redis_pipe = _redis.pipeline()
+    # # Connect to local redis server for Zed
+    # _redis = redis.Redis(
+    #     host=BOHG_FRANKA_HOST, port=BOHG_FRANKA_PORT, password=BOHG_FRANKA_PWD
+    # )
+    # redis_pipe = _redis.pipeline()
+    
+    # Initialize zed camera
+    zed = init_zed(args.resolution, args.depth_mode)
+    camera_params, K_left, K_right = get_camera_params(zed)
+    res = camera_params.left_cam.image_size
+    img_left = sl.Mat(res.width, res.height, sl.MAT_TYPE.U8_C4)
+    img_right = sl.Mat(res.width, res.height, sl.MAT_TYPE.U8_C4)
+    depth_img = sl.Mat(res.width, res.height, sl.MAT_TYPE.F32_C4)
 
     def str_to_list(s):
         return list(map(float, s.strip('[]').split()))
@@ -69,9 +78,9 @@ def main(args):
     robot.go_home()
 
     for i in range(len(pos_waypt_list)):
-    # for i in range(4):
+    # for i in range(5):
     # for i in range(15):
-        if i == 30 or i ==34 or i == 35 or i==36 or i == 37 or i == 38:
+        if i == 17 or i == 30 or i ==34 or i == 35 or i==36 or i == 37 or i == 38:
             continue
         # # if i >= 35:
         # #     break
@@ -130,27 +139,30 @@ def main(args):
 
                 # Get current image and save
                 fname = f"{img_dir}/img_{i}.png"
-                redis_pipe.get(KEY_LEFT_CAMERA_IMAGE_BIN)
-                redis_pipe.get(KEY_LEFT_CAMERA_INTRINSIC)
-                b_img, b_K = redis_pipe.execute()
-                img = m.unpackb(b_img)
-                K = decode_matlab(b_K)
-                rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # [720, 1280, 3]
-                cv2.imwrite(fname, rgb_img)
+                if zed.grab() == sl.ERROR_CODE.SUCCESS:
+                    img_left_rgb, img_right_rgb, depth_img_arr = capture_camera_data(zed, args.depth_mode, img_left, img_right, depth_img)
+                    # redis_pipe.get(KEY_LEFT_CAMERA_IMAGE_BIN)
+                    # redis_pipe.get(KEY_LEFT_CAMERA_INTRINSIC)
+                    # b_img, b_K = redis_pipe.execute()
+                    # img = m.unpackb(b_img)
+                    # K = decode_matlab(b_K)
+                    # rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # [720, 1280, 3]
+                    img_left_bgr = img_left_rgb[...,::-1]  # bgr to rgb
+                    cv2.imwrite(fname, img_left_bgr)
 
-                # Get eef pose and save
-                eef_pos_cur, eef_quat_cur = robot.get_pose()  # [3,], [4,]
-                qpos = robot.get_q()
+                    # Get eef pose and save
+                    eef_pos_cur, eef_quat_cur = robot.get_pose()  # [3,], [4,]
+                    qpos = robot.get_q()
 
-                data_dict = {
-                    "pos": eef_pos_cur,
-                    "ori": eef_quat_cur,
-                    "qpos": qpos,
-                    "imgs": [rgb_img],
-                    "K": K,
-                }
-                cal_data.append(data_dict)
-                saved = True
+                    data_dict = {
+                        "pos": eef_pos_cur.copy(),
+                        "ori": eef_quat_cur.copy(),
+                        "qpos": qpos.copy(),
+                        "imgs": [img_left_rgb.copy()],
+                        "K": K_left.copy(),
+                    }
+                    cal_data.append(data_dict)
+                    saved = True
 
     # Save policy data dict
     data_path = os.path.join(save_dir, "calibration_data.pkl")
@@ -168,6 +180,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sim", action="store_true", help="If using flag, will run robot in sim"
     )
+    parser.add_argument("--resolution", required=True, choices=["VGA", "HD720", "HD1080", "HD2K"])
+    parser.add_argument("--depth_mode", default="PERFORMANCE", choices=["PERFORMANCE", "ULTRA", "QUALITY", "NEURAL", "TRI", "NONE"])
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 

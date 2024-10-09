@@ -14,6 +14,7 @@ import pyzed.sl as sl
 from human_shadow.utils.file_utils import get_parent_folder_of_package
 from human_shadow.camera.zed_utils import *
 from human_shadow.utils.button_utils import *
+from human_shadow.utils.image_utils import *
 
 
 def create_output_folder(args):
@@ -29,44 +30,6 @@ def create_output_folder(args):
     intrinsics_path = os.path.join(save_folder, f"cam_intrinsics_{n_folders}.json")
     depth_path = os.path.join(save_folder, f"depth_{n_folders}.npy")
     return left_video_path, right_video_path, depth_path, intrinsics_path
-
-def get_camera_params(zed):
-    camera_model = zed.get_camera_information().camera_model
-    camera_params = (
-        zed.get_camera_information().camera_configuration.calibration_parameters
-    )
-    K_left = get_intrinsics_matrix(camera_params, cam_side="left")
-    K_right = get_intrinsics_matrix(camera_params, cam_side="right")
-    return camera_params, K_left, K_right
-
-
-def capture_camera_data(zed, depth_mode, img_left, img_right, depth_img): 
-    zed.retrieve_image(img_left, sl.VIEW.LEFT, sl.MEM.CPU)
-    zed.retrieve_image(img_right, sl.VIEW.RIGHT, sl.MEM.CPU)
-    if not depth_mode == "NONE":
-        if not depth_mode == "TRI": 
-            zed.retrieve_measure(depth_img, sl.MEASURE.DEPTH, sl.MEM.CPU)
-
-    # RGB image
-    img_left_bgr = img_left.get_data()[:,:,:3]
-    img_left_rgb = img_left_bgr[...,::-1] # bgr to rgb
-    img_right_bgr = img_right.get_data()[:,:,:3]
-    img_right_rgb = img_right_bgr[...,::-1] # bgr to rgb
-    depth_img_arr = depth_img.get_data()
-    
-    return img_left_rgb, img_right_rgb, depth_img_arr
-
-def resize_img_to_square(img):
-    img_w = img.shape[1]
-    img_h = img.shape[0]
-    min_dim = min(img_w, img_h)
-    if img_w > min_dim:
-        diff = img_w - min_dim
-        img = img[:, diff//2:diff//2+min_dim]
-    elif img_h > min_dim:
-        diff = img_h - min_dim
-        img = img[diff//2:diff//2+min_dim, :]
-    return img
 
 def record_one_video(zed, camera_params, args, button):
     res = camera_params.left_cam.image_size
@@ -125,8 +88,6 @@ def save_videos(left_video_path, right_video_path, left_imgs, right_imgs, args):
     future_left = executor.submit(media.write_video, left_video_path, left_imgs, fps=30)
     future_right = executor.submit(media.write_video, right_video_path, right_imgs, fps=30)
     return future_left, future_right
-
-
 
 def init(args):
     # Initialize zed camera
