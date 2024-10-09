@@ -15,6 +15,12 @@ python hand_pose.py
 ```
 This file contains 4 methods on how to obtain 3D estimates of keypoints on the hand. 
 
+### 3D Hand pose estimation live
+```
+python hand_pose_live.py
+```
+This file will run hand pose estimation for live images. Please update the image, depth and intrinsics in it. 
+
 
 ### TODO
  - Move data paths to shared folder in /juno/group/human_shadow
