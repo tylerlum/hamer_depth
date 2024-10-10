@@ -35,6 +35,43 @@ This file will run hand pose estimation for live images. Please update the image
  python collect_human_data.py --folder demo_name -hz 30 --depth_mode NEURAL --resolution HD1080
 ```
 
+## RedisGL Franka + HaMeR visualization 
+On Franka NUC:
+1. Run 
+ ```
+ cd marion/franka-panda.git/bin
+ ./franka_panda_driver ../resources/default.yaml
+```
+
+On bohg-franka:
+1. In window 1, run 
+ ```
+ cd redis-gl
+ ./server.py
+```
+
+2. In window 2, run 
+ ```
+ cd franka-panda/bin/
+ ./franka_panda_opspace -g robotiq --mirror --robot_host 172.24.68.230 --robot_pass iprl
+```
+
+3. In window 3, run
+ ```
+ cd human_shadow/human_shadow/camera/
+ python zed_redis_driver.py --resolution HD1080 --depth_mode NEURAL
+```
+
+4. In window 4, run 
+ ```
+cd human_shadow/human_shadow/
+python visualize_hand_redis.py --render
+```
+
+5. In chrome, go to http://localhost:8000/simulator.html
+
+
+
 
 ## Real robot guide 
 
