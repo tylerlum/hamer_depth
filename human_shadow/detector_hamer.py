@@ -34,7 +34,7 @@ class DetectorHamer:
         root_dir = get_parent_folder_of_package("hamer")
         checkpoint_path = Path(root_dir, DEFAULT_CHECKPOINT)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
+        
         self.rescale_factor = 2.0 # Factor for padding the box
         self.batch_size = 1 # Batch size for inference
 
@@ -60,8 +60,12 @@ class DetectorHamer:
         bboxes, is_right = self.get_bboxes_for_hamer(img)
         if bboxes is None:
             return img, False, None, None, None, None, None, None, None, None, None
-        if len(bboxes) == 0:
+        try:
+            if len(bboxes) == 0:
+                return img, False, None, None, None, None, None, None, None, None, None
+        except:
             return img, False, None, None, None, None, None, None, None, None, None
+    
         
         scaled_focal_length, camera_center = self.get_image_params(img, camera_params)
 
@@ -71,7 +75,7 @@ class DetectorHamer:
 
         list_2d_kpts, list_3d_kpts, list_verts = [], [], []
         for batch in dataloader:
-            batch = recursive_to(batch, "cuda")
+            batch = recursive_to(batch, self.device)
             with torch.no_grad():
                 out = self.model(batch)
 
@@ -208,7 +212,7 @@ class DetectorHamer:
 
     
     def get_bboxes(self, img: np.ndarray, use_dino: bool=True, 
-                   use_detectron: bool=True, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray]:
+                   use_detectron: bool=False, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get bounding boxes around the hands using the Dino or Detectron detectors
         """

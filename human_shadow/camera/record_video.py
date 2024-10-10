@@ -16,23 +16,6 @@ from human_shadow.utils.file_utils import get_parent_folder_of_package
 from human_shadow.camera.zed_utils import *
 from human_shadow.utils.button_utils import *
 
-
-def capture_camera_data(zed, depth_mode, img_left, img_right, depth_img): 
-    zed.retrieve_image(img_left, sl.VIEW.LEFT, sl.MEM.CPU)
-    zed.retrieve_image(img_right, sl.VIEW.RIGHT, sl.MEM.CPU)
-    if not depth_mode == "NONE":
-        if not depth_mode == "TRI": 
-            zed.retrieve_measure(depth_img, sl.MEASURE.DEPTH, sl.MEM.CPU)
-
-    # RGB image
-    img_left_bgr = img_left.get_data()[:,:,:3]
-    img_left_rgb = img_left_bgr[...,::-1] # bgr to rgb
-    img_right_bgr = img_right.get_data()[:,:,:3]
-    img_right_rgb = img_right_bgr[...,::-1] # bgr to rgb
-    depth_img_arr = depth_img.get_data()
-    
-    return img_left_rgb, img_right_rgb, depth_img_arr
-
 def main(args): 
     # Initialize zed camera
     zed = init_zed(args.resolution, args.depth_mode)
@@ -47,10 +30,8 @@ def main(args):
     save_intrinsics(camera_params, save_path="camera_intrinsics.json")
 
     res = camera_params.left_cam.image_size
-
     img_left = sl.Mat(res.width, res.height, sl.MAT_TYPE.U8_C4)
     img_right = sl.Mat(res.width, res.height, sl.MAT_TYPE.U8_C4)
-
     depth_img = sl.Mat(res.width, res.height, sl.MAT_TYPE.F32_C4)
 
     # Create output folder 

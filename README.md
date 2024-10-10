@@ -21,6 +21,20 @@ python hand_pose_live.py
 ```
 This file will run hand pose estimation for live images. Please update the image, depth and intrinsics in it. 
 
+## Data collection 
+### View ZED camera images live
+ ```
+ cd human_shadow/camera/
+ python zed_redis_driver.py --resolution HD1080 --depth_mode NEURAL --render
+```
+
+
+### Collect human demonstrations 
+ ```
+ cd human_shadow
+ python collect_human_data.py --folder demo_name -hz 30 --depth_mode NEURAL --resolution HD1080
+```
+
 
 ## Real robot guide 
 

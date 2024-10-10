@@ -2,9 +2,17 @@ import pdb
 import json
 import os
 import numpy as np 
+import argparse
+import msgpack_numpy as m
+m.patch()
 
-# import matplotlib.pyplot as plt
+import time
+import cv2
+import matplotlib
+matplotlib.use('agg')
+from tqdm import tqdm
 import mediapy as media
+import ctrlutils
 import mmt.stereo_inference.python.simple_inference as stereo_to_depth
 
 from human_shadow.detector_dino import DetectorDino
@@ -12,11 +20,8 @@ from human_shadow.detector_detectron2 import DetectorDetectron2
 from human_shadow.detector_hamer import DetectorHamer
 from human_shadow.detector_sam2 import DetectorSam2
 from human_shadow.utils.pcd_utils import *
-import time
-import cv2
-import matplotlib
-matplotlib.use('agg')
-from tqdm import tqdm
+from human_shadow.config.redis_keys import *
+from human_shadow.camera.zed_utils import *
 
 def get_transition(vertex_idx_list, mesh, visible_points_3d):
     '''
@@ -41,7 +46,7 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     '''
     Get hand pose
     '''
-    fx = intrinsics["left"]["fx"]
+    fx = intrinsics["fx"]
     img_rgb = image.copy()
     img_bgr = img_rgb[..., ::-1]
 
@@ -64,7 +69,7 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     init_transform = np.eye(4)
 
     # Get segmented out pcd
-    pcd = get_point_cloud_of_segmask(masks[2], depth, img_rgb, intrinsics["left"], visualize=False)
+    pcd = get_point_cloud_of_segmask(masks[2], depth, img_rgb, intrinsics, visualize=False)
     
     # mesh faces
     faces = detector_hamer.faces
@@ -107,14 +112,18 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     visible_points_3d = []
     vertex_idx_list = []
     for vertex_idx, pt_2d in enumerate(visible_points_2d):
-        pt_3d = get_3D_point_from_pixel(pt_2d[0], pt_2d[1], depth[pt_2d[1], pt_2d[0]], intrinsics["left"])
+        try:
+            pt_3d = get_3D_point_from_pixel(pt_2d[0], pt_2d[1], depth[pt_2d[1], pt_2d[0]], intrinsics)
+        except:
+            print("Failed to get 3d point")
+            return None, None, None, None, None
         visible_points_3d.append(pt_3d)
         vertex_idx_list.append(visible_vertex_indices[vertex_idx])
 
     vertex_idx_list = np.array(vertex_idx_list)
     if len(vertex_idx_list) == 0:
         print('Failed!')
-        return
+        return None, None, None, None, None
     
     # Get the pcd of new visible vertices in 3d
     pcd_visible_points_3d = get_pcd_from_points(visible_points_3d, colors=np.ones_like(visible_points_3d) * [0,1,0])
@@ -151,36 +160,55 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     middle_tip_points = middle_tip_points.transform(transformation)
     tip_points_control = get_pcd_from_points(tip_points_control, colors=np.ones_like(tip_points_control) * [1, 0, 0])
     tip_points_control = tip_points_control.transform(transformation)
-    pcd_vis = visualize_pcds([pcd, all_pcd, tip_points_control, thumb_tip_points, middle_tip_points], visible=False)
 
-    return np.asarray(tip_points_control.points), np.asarray(thumb_tip_points.points), np.asarray(middle_tip_points.points), annotated_img, img_arr, pcd_vis
-  
-if __name__ == '__main__':
+    return np.asarray(tip_points_control.points), np.asarray(thumb_tip_points.points), np.asarray(middle_tip_points.points), annotated_img, img_arr
+
+def main(args):
+
+    # Set up redis server
+    _redis = ctrlutils.RedisClient(
+        host=BOHG_FRANKA_HOST, port=BOHG_FRANKA_PORT, password=BOHG_FRANKA_PWD
+    )
+    redis_pipe = _redis.pipeline()
+
+    # Initialize detectors
     detector_id = "IDEA-Research/grounding-dino-base"
     detector_bbox = DetectorDino(detector_id)
     detector_hamer = DetectorHamer()
     segmentor = DetectorSam2()
-    # Edit: get image, depth and intrinsics
-    depths = np.load("/juno/u/jyfang/human_shadow/data/data_collection_2/demo_2K/0/depth_0.npy")
-    intrinsics_path = "/juno/u/jyfang/human_shadow/data/data_collection_2/demo_2K/0/cam_intrinsics_0.json"
-    cv2.startWindowThread()
-    for img_num in tqdm(range(30)):
-        image = cv2.imread("/juno/u/jyfang/human_shadow/data/data_collection_2/demo_2K/0/video_0_L/%05d.jpg"%img_num)
-        depth = depths[img_num]
-        image = image[..., ::-1]
-        with open(intrinsics_path, "r") as f:
-            intrinsics = json.load(f)
-        tip_points_control, thumb_tip_points, middle_tip_points, hamer_image, sam2_image, pcd_vis = get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrinsics)
+
+    print("Starting hand detection")
+    while True: 
+        redis_pipe.get(KEY_LEFT_RIGHT_CAMERA_IMAGE_BIN)
+        redis_pipe.get(KEY_LEFT_CAMERA_INTRINSIC)
+        img_left_right_rgba_b, K_left_b = redis_pipe.execute()
+        img_left_right_rgba = m.unpackb(img_left_right_rgba_b)
+        img_left_rgba = img_left_right_rgba[0]
+        img_right_rgba = img_left_right_rgba[1]
+        img_left_rgb = img_left_rgba[..., :3].astype(np.uint8)
+        img_right_rgb = img_right_rgba[..., :3].astype(np.uint8)
+        depth_img_arr = img_left_rgba[..., 3]
+        K_left = m.unpackb(K_left_b)
+        
+        # Detect hand pose 
+        tip_points_control, thumb_tip_points, middle_tip_points, hamer_image, sam2_image = get_hand_pose(detector_bbox, detector_hamer, segmentor, img_left_rgb, depth_img_arr, convert_intrinsics_matrix_to_dict(K_left))
+
         if tip_points_control is not None:
-            image = image[..., ::-1]
-            sam2_image_bgr = sam2_image[..., ::-1]
-            pcd_vis = cv2.resize(pcd_vis, (533, 300))
-            pcd_vis_bgr = pcd_vis[..., ::-1]
-            hamer_image = cv2.resize(hamer_image, (533, 300))
-            image_vis1 = cv2.hconcat([image, sam2_image_bgr])
-            image_vis1 = cv2.resize(image_vis1, (1066, 300))
-            image_vis2 = cv2.hconcat([hamer_image, pcd_vis_bgr])
-            image_vis = cv2.vconcat([image_vis1, image_vis2])
-            cv2.imshow('visualization_image', image_vis)
-            cv2.waitKey(1)
+            print("HAND DETECTED")
+
+            hand_points = np.vstack([tip_points_control, thumb_tip_points, middle_tip_points])
+            hand_points_b = m.packb(hand_points)
+
+            hand_imgs = np.vstack([hamer_image[None,...], sam2_image[None,...]])
+            hand_imgs_b = m.packb(hand_imgs)
+
+            redis_pipe.set(KEY_HAND_EE_POS, hand_points_b)
+            redis_pipe.set(KEY_HAMER_IMAGE, hand_imgs_b)
+            redis_pipe.execute()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    main(args)
 

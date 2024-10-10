@@ -62,6 +62,19 @@ def get_intrinsics_matrix(camera_params, cam_side: str="left"):
 
     return K
 
+def convert_intrinsics_matrix_to_dict(camera_matrix):
+    fx = camera_matrix[0, 0]
+    fy = camera_matrix[1, 1]
+    cx = camera_matrix[0, 2]
+    cy = camera_matrix[1, 2]
+    intrinsics = {
+        "fx": fx,
+        "fy": fy,
+        "cx": cx,
+        "cy": cy,
+    }
+    return intrinsics
+
 def get_intrinsics_from_json(json_path: str):
     with open(json_path, "r") as f:
         camera_intrinsics = json.load(f)

@@ -28,8 +28,9 @@ class DetectorSam2:
     def __init__(self):
         checkpoint = "/juno/u/jyfang/human_shadow/segment-anything-2/checkpoints/sam2_hiera_large.pt"
         model_cfg = "sam2_hiera_l.yaml"
-        self.image_predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint, device="cuda"))
-        self.video_predictor = build_sam2_video_predictor(model_cfg, checkpoint, device="cuda")
+        self.device = "cuda"
+        self.image_predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint, device=self.device))
+        self.video_predictor = build_sam2_video_predictor(model_cfg, checkpoint, device=self.device)
 
     def segment_frame(self, frame: np.ndarray, positive_pts: Optional[np.ndarray]=None,
                       negative_pts: Optional[np.ndarray]=None,
@@ -48,7 +49,7 @@ class DetectorSam2:
         else:
             point_coords = None
             point_labels = None
-        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.inference_mode(), torch.autocast(self.device, dtype=torch.bfloat16):
             self.image_predictor.set_image(img)
             masks, scores, _ = self.image_predictor.predict(
                 point_coords=point_coords,
@@ -68,7 +69,7 @@ class DetectorSam2:
     def segment_video(self, video_dir: str, bbox, bbox_ctr: np.ndarray, visualize: bool=False, start_idx: int=0, path:str=None) -> None:
         frame_names = os.listdir(video_dir)
         frame_names = sorted(frame_names)
-        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.inference_mode(), torch.autocast(self.device, dtype=torch.bfloat16):
             state = self.video_predictor.init_state(video_path=video_dir)
             self.video_predictor.reset_state(state)
 
