@@ -1,6 +1,20 @@
 import pyzed.sl as sl
 import numpy as np
 import json
+import enum
+
+class ZEDResolution(enum.Enum):
+  SD = (480, 640)
+  HD720 = (720, 1280)
+  HD1080 = (1080, 1920)
+  HD2K = (1242, 2208)
+
+ZED_RESOLUTIONS = {
+    "SD": ZEDResolution.SD,
+    "HD720": ZEDResolution.HD720,
+    "HD1080": ZEDResolution.HD1080,
+    "HD2K": ZEDResolution.HD2K,
+    }
 
 def capture_camera_data(zed, depth_mode, img_left, img_right, depth_img): 
     zed.retrieve_image(img_left, sl.VIEW.LEFT, sl.MEM.CPU)

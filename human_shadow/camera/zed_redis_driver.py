@@ -67,6 +67,9 @@ def stream_camera_data(args, zed, img_left, img_right, depth_img, point_cloud,
             img_left_right_rgb = np.stack([img_left_rgb, img_right_rgb])
             b_img_left_right_rgb = m.packb(img_left_right_rgb)
 
+
+
+
     if args.render:
         img_w = img_left_bgr.shape[1]
         img_h = img_left_bgr.shape[0]
@@ -116,7 +119,7 @@ def main(args):
     )
     K_left = get_intrinsics_matrix(camera_params, cam_side="left")
     K_right = get_intrinsics_matrix(camera_params, cam_side="right")
-    save_intrinsics(camera_params, save_path="camera_intrinsics.json")
+    save_intrinsics(camera_params, save_path=f"intrinsics/camera_intrinsics_{args.resolution}.json")
 
     res = camera_params.left_cam.image_size
 
