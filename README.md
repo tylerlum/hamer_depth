@@ -21,6 +21,20 @@ python hand_pose_live.py
 ```
 This file will run hand pose estimation for live images. Please update the image, depth and intrinsics in it. 
 
+### 3D Hand pose estimation video processing
+Note: This is for left-hand only
+1. Do video preprocessing to generate and crop images and create folders.
+```
+python video_preprocessing.py
+```
+2. Run hand_pose_verify.py to get all the prediction results and visualization images.
+```
+python hand_pose_verify.py
+```
+3. Get full visualization video.
+```
+python generate_full_visualization.py
+```
 
 ### TODO
  - Move data paths to shared folder in /juno/group/human_shadow
