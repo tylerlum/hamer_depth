@@ -4,6 +4,7 @@ import mediapy as media
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 def generate_visualization(dir_path):
     '''
@@ -82,12 +83,24 @@ def generate_visualization(dir_path):
             images_all.append(images)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(images, video_dir, (20, 60), font, 3, (0, 255, 0), 2, cv2.LINE_AA)
-            images_all_full.append(images)
+            # images_all_full.append(images)
 
         media.write_video(os.path.join(video_folder, "visualization.mp4"), images_all, fps=30)
-    media.write_video(os.path.join(dir_path, "full_visualization.mp4"), images_all_full, fps=30)
+    # media.write_video(os.path.join(dir_path, "full_visualization.mp4"), images_all_full, fps=30)
+
+def concatenate_videos_iterative(dir_path):
+    video_paths = []
+    for video_dir in tqdm(sorted(os.listdir(dir_path), key=lambda x: int(os.path.splitext(x)[0]))):
+        video_folder = os.path.join(dir_path, video_dir)
+        video_paths.append(os.path.join(video_folder, "visualization.mp4"))
+    clips = [VideoFileClip(path) for path in video_paths]
+    final_clip = concatenate_videoclips(clips)
+
+    final_clip.write_videofile(os.path.join(dir_path, "full_visualization.mp4"))
+
 
 if __name__ == '__main__':
     # Change path
-    dir_path = "/juno/u/jyfang/human_shadow/data/demo_jiaying_waffles_large"
+    dir_path = "/juno/u/jyfang/human_shadow/data/demo_jiaying_waffles_large_2"
     generate_visualization(dir_path)
+    concatenate_videos_iterative(dir_path)
