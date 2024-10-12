@@ -108,6 +108,8 @@ def main(args):
         hamer_img_bgr = hand_imgs[0]
         sam2_img_rgb = hand_imgs[1]
 
+        print(hand_ee_pt)
+
         hand_ee_pt = transform_pt(hand_ee_pt, T_cam2robot)
         thumb_pt = transform_pt(thumb_pt, T_cam2robot)
         middle_pt = transform_pt(middle_pt, T_cam2robot)
@@ -115,6 +117,7 @@ def main(args):
         update_marker_pos(redis_pipe, f"redisgl::human_shadow::markers_hand_ee::model::object::hand_ee", pos=hand_ee_pt.tolist())
         update_marker_pos(redis_pipe, f"redisgl::human_shadow::markers_thumb::model::object::thumb", pos=thumb_pt.tolist())
         update_marker_pos(redis_pipe, f"redisgl::human_shadow::markers_middle::model::object::middle", pos=middle_pt.tolist())
+
 
         if args.render:
             sam2_img_bgr = sam2_img_rgb[..., ::-1]

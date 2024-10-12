@@ -41,6 +41,11 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     '''
     Get hand pose
     '''
+    # Crop the depth to 1000x1000
+    depth = depth[:1000, 80:]
+
+    # Adjust intrinsics based on the cropping
+    intrinsics["left"]["cx"] = intrinsics["left"]["cx"] - 80
     fx = intrinsics["left"]["fx"]
     img_rgb = image.copy()
     img_bgr = img_rgb[..., ::-1]
@@ -67,22 +72,25 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     pcd = get_point_cloud_of_segmask(masks[2], depth, img_rgb, intrinsics["left"], visualize=False)
     
     # mesh faces
-    faces = detector_hamer.faces
-    faces_new = np.array([[92, 38, 234],
-                        [234, 38, 239],
-                        [38, 122, 239],
-                        [239, 122, 279],
-                        [122, 118, 279],
-                        [279, 118, 215],
-                        [118, 117, 215],
-                        [215, 117, 214],
-                        [117, 119, 214],
-                        [214, 119, 121],
-                        [119, 120, 121],
-                        [121, 120, 78],
-                        [120, 108, 78],
-                        [78, 108, 79]])
-    faces = np.concatenate([faces, faces_new], axis=0)
+    # faces = detector_hamer.faces
+    # faces_new = np.array([[92, 38, 234],
+    #                     [234, 38, 239],
+    #                     [38, 122, 239],
+    #                     [239, 122, 279],
+    #                     [122, 118, 279],
+    #                     [279, 118, 215],
+    #                     [118, 117, 215],
+    #                     [215, 117, 214],
+    #                     [117, 119, 214],
+    #                     [214, 119, 121],
+    #                     [119, 120, 121],
+    #                     [121, 120, 78],
+    #                     [120, 108, 78],
+    #                     [78, 108, 79]])
+    # faces = np.concatenate([faces, faces_new], axis=0)
+
+    # Use left faces
+    faces = detector_hamer.faces_left
 
     # Initialize mesh and camera position
     mesh = trimesh.Trimesh(verts.copy(), faces.copy())
@@ -141,16 +149,17 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
 
     # Get the thumb tip, middle finger tip and control point
     thumb_tip_points = [mesh.vertices[756]]
-    middle_tip_points = [mesh.vertices[455]]
-    tip_points_control = [(mesh.vertices[756] + mesh.vertices[455])/2]
+    index_tip_points = [mesh.vertices[350]]
+    tip_points_middle = [(mesh.vertices[756] + mesh.vertices[350])/2]
 
     # Apply the transformation obtained from ICP
     thumb_tip_points = get_pcd_from_points(thumb_tip_points, colors=np.ones_like(thumb_tip_points) * [1, 0, 0])
     thumb_tip_points = thumb_tip_points.transform(transformation)
-    middle_tip_points = get_pcd_from_points(middle_tip_points, colors=np.ones_like(middle_tip_points) * [1, 0, 0])
-    middle_tip_points = middle_tip_points.transform(transformation)
-    tip_points_control = get_pcd_from_points(tip_points_control, colors=np.ones_like(tip_points_control) * [1, 0, 0])
-    tip_points_control = tip_points_control.transform(transformation)
+    index_tip_points = get_pcd_from_points(index_tip_points, colors=np.ones_like(index_tip_points) * [1, 0, 0])
+    index_tip_points = index_tip_points.transform(transformation)
+    tip_points_middle = get_pcd_from_points(tip_points_middle, colors=np.ones_like(tip_points_middle) * [1, 0, 0])
+    tip_points_middle = tip_points_middle.transform(transformation)
+
     pcd_vis = visualize_pcds([pcd, all_pcd, tip_points_control, thumb_tip_points, middle_tip_points], visible=False)
 
     return np.asarray(tip_points_control.points), np.asarray(thumb_tip_points.points), np.asarray(middle_tip_points.points), annotated_img, img_arr, pcd_vis
@@ -161,11 +170,11 @@ if __name__ == '__main__':
     detector_hamer = DetectorHamer()
     segmentor = DetectorSam2()
     # Edit: get image, depth and intrinsics
-    depths = np.load("/juno/u/jyfang/human_shadow/data/data_collection_2/demo_2K/0/depth_0.npy")
-    intrinsics_path = "/juno/u/jyfang/human_shadow/data/data_collection_2/demo_2K/0/cam_intrinsics_0.json"
+    depths = np.load("/juno/u/jyfang/human_shadow/data/demo_jiaying_waffles_large/1/depth_1.npy")
+    intrinsics_path = "/juno/u/jyfang/human_shadow/data/demo_jiaying_waffles_large/1/cam_intrinsics_1.json"
     cv2.startWindowThread()
     for img_num in tqdm(range(30)):
-        image = cv2.imread("/juno/u/jyfang/human_shadow/data/data_collection_2/demo_2K/0/video_0_L/%05d.jpg"%img_num)
+        image = cv2.imread("/juno/u/jyfang/human_shadow/data/demo_jiaying_waffles_large/1/video_1_L/%05d.jpg"%img_num)
         depth = depths[img_num]
         image = image[..., ::-1]
         with open(intrinsics_path, "r") as f:

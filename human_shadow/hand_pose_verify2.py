@@ -42,6 +42,8 @@ def get_transition(vertex_idx_list, mesh, visible_points_3d):
     transition = np.median(transition, axis=0)
     return transition
 
+
+
 def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrinsics):
     '''
     Get hand pose
@@ -161,15 +163,40 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     tip_points_control = get_pcd_from_points(tip_points_control, colors=np.ones_like(tip_points_control) * [1, 0, 0])
     tip_points_control = tip_points_control.transform(transformation)
 
-    return np.asarray(tip_points_control.points), np.asarray(thumb_tip_points.points), np.asarray(middle_tip_points.points), annotated_img, img_arr
+    return np.squeeze(np.asarray(tip_points_control.points)), np.squeeze(np.asarray(thumb_tip_points.points)), np.squeeze(np.asarray(middle_tip_points.points))
+
+def transform_pt(pt, T):
+    pt = np.array(pt)
+    pt = np.append(pt, 1)
+    pt = np.dot(T, pt)
+    return pt[:3]
 
 def main(args):
+    # Camera extrinsics
+    camera_extrinsics_path = "camera/camera_calibration_data/hand_calib_HD1080/cam_cal.json"
+    with open(camera_extrinsics_path, "r") as f:
+        camera_extrinsics = json.load(f)
+    cam_base_pos = np.array(camera_extrinsics[0]["camera_base_pos"])
+    cam_base_ori = np.array(camera_extrinsics[0]["camera_base_ori"])
+    T_cam2robot = np.eye(4)
+    T_cam2robot[:3, 3] = cam_base_pos
+    T_cam2robot[:3, :3] = np.array(cam_base_ori).reshape(3, 3)
 
-    # Set up redis server
-    _redis = ctrlutils.RedisClient(
-        host=BOHG_FRANKA_HOST, port=BOHG_FRANKA_PORT, password=BOHG_FRANKA_PWD
-    )
-    redis_pipe = _redis.pipeline()
+
+    video_folder = "/juno/u/lepertm/shadow/human_shadow/human_shadow/data/videos/demo_marion_calib_2/0"
+    video_path = os.path.join(video_folder, "video_0_L.mp4")
+    imgs_left_rgb = np.array(media.read_video(video_path))
+    depth_img_arr = np.load(os.path.join(video_folder, "depth_0.npy"))
+
+    pdb.set_trace()
+
+    intrinsics_path = os.path.join(video_folder, "cam_intrinsics_0.json")
+    K_left = get_intrinsics_from_json(intrinsics_path)
+
+
+    # Detect hand pose 
+    img_left_rgb = imgs_left_rgb[0]
+    depth_img = depth_img_arr[0]
 
     # Initialize detectors
     detector_id = "IDEA-Research/grounding-dino-base"
@@ -177,39 +204,18 @@ def main(args):
     detector_hamer = DetectorHamer()
     segmentor = DetectorSam2()
 
-    print("Starting hand detection")
-    while True: 
-        redis_pipe.get(KEY_LEFT_RIGHT_CAMERA_IMAGE_BIN)
-        redis_pipe.get(KEY_LEFT_CAMERA_INTRINSIC)
-        img_left_right_rgba_b, K_left_b = redis_pipe.execute()
-        img_left_right_rgba = m.unpackb(img_left_right_rgba_b)
-        img_left_rgba = img_left_right_rgba[0]
-        img_right_rgba = img_left_right_rgba[1]
-        img_left_rgb = img_left_rgba[..., :3].astype(np.uint8)
-        img_right_rgb = img_right_rgba[..., :3].astype(np.uint8)
-        depth_img_arr = img_left_rgba[..., 3]
-        pdb.set_trace()
-        K_left = m.unpackb(K_left_b)
-        
-        # Detect hand pose 
-        tip_points_control, thumb_tip_points, middle_tip_points, hamer_image, sam2_image = get_hand_pose(detector_bbox, detector_hamer, segmentor, img_left_rgb, depth_img_arr, convert_intrinsics_matrix_to_dict(K_left))
 
-        if tip_points_control is not None:
-            print("HAND DETECTED")
+    tip_points_control, thumb_tip_points, middle_tip_points = get_hand_pose(detector_bbox, detector_hamer, segmentor, img_left_rgb, depth_img, convert_intrinsics_matrix_to_dict(K_left))
 
-            hand_points = np.vstack([tip_points_control, thumb_tip_points, middle_tip_points])
-            hand_points_b = m.packb(hand_points)
+    print(tip_points_control)
 
-            hand_imgs = np.vstack([hamer_image[None,...], sam2_image[None,...]])
-            hand_imgs_b = m.packb(hand_imgs)
+    new_tip_points_control = transform_pt(tip_points_control, T_cam2robot)
+    print(new_tip_points_control)
 
-            redis_pipe.set(KEY_HAND_EE_POS, hand_points_b)
-            redis_pipe.set(KEY_HAMER_IMAGE, hand_imgs_b)
-            redis_pipe.execute()
+    pdb.set_trace()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
     main(args)
-

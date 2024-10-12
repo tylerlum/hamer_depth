@@ -100,10 +100,16 @@ if __name__ == "__main__":
     detector_id = "IDEA-Research/grounding-dino-tiny"
     detector = DetectorDino(detector_id)
 
+    video_folder = "/juno/u/lepertm/shadow/human_shadow/human_shadow/data/videos/demo_marion_calib/0"
+    left_video_path = os.path.join(video_folder, f"video_0_L_preprocessed.mp4")
+    left_imgs = np.array(media.read_video(left_video_path))
+    detector.get_bboxes(left_imgs[0], "hand", visualize=True, visualize_wait=True)
+    pdb.set_trace()
+
     indices = np.arange(13, 40)
     for idx in indices:
         img_path = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L/000{idx}.jpg")
 
         frame = media.read_image(img_path)
         # detector.get_best_bbox(frame, "hand", visualize=True)
-        detector.get_bboxes(frame, "hand", visualize=True, visualize_wait=False)
+        detector.get_bboxes(frame, "hand", threshold=0.2, visualize=True, visualize_wait=False)

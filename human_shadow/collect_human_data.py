@@ -56,9 +56,9 @@ def record_one_video(zed, camera_params, args, button):
         if zed.grab() == sl.ERROR_CODE.SUCCESS:
             img_left_rgb, img_right_rgb, depth_img_arr = capture_camera_data(zed, args.depth_mode, img_left, 
             img_right, depth_img)
-            img_left_rgb = resize_img_to_square(img_left_rgb)
-            img_right_rgb = resize_img_rgb = resize_img_to_square(img_right_rgb)
-            depth_img_arr = resize_img_to_square(depth_img_arr)
+            # img_left_rgb = resize_img_to_square(img_left_rgb)
+            # img_right_rgb = resize_img_rgb = resize_img_to_square(img_right_rgb)
+            # depth_img_arr = resize_img_to_square(depth_img_arr)
 
             left_imgs.append(img_left_rgb.copy())
             right_imgs.append(img_right_rgb.copy())
