@@ -326,3 +326,4 @@ if __name__ == '__main__':
         video_folder = os.path.join(dir_path, video_dir)
         video_num = int(video_dir)
         get_hand_pose(detector_bbox, detector_hamer, segmentor, video_folder, video_num)
+
