@@ -6,7 +6,10 @@ Adapted from Zi-ang-Cao's code and original HaMeR code.
 
 import os
 import pdb
+import glob
+from enum import Enum
 import json
+import logging
 import numpy as np
 from pathlib import Path
 from typing import Optional, Tuple
@@ -29,6 +32,14 @@ from human_shadow.detectors.detector_detectron2 import DetectorDetectron2
 from human_shadow.detectors.detector_dino import DetectorDino
 from human_shadow.utils.file_utils import get_parent_folder_of_package
 from human_shadow.camera.zed_utils import *
+from human_shadow.config.logger_config import *
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+class HandType(Enum):
+    LEFT = "left"
+    RIGHT = "right"
 
 class DetectorHamer:
     def __init__(self):
@@ -52,33 +63,30 @@ class DetectorHamer:
         self.faces_left = self.faces[:,[0,2,1]]
         self.renderer = Renderer(self.model_cfg, faces=self.model.mano.faces)
 
-
-    def detect_hand_keypoints(self, img: np.ndarray, frame_idx, 
-                              visualize: bool=False, visualize_3d: bool=False, visualize_wait: bool=True, path:str=None,
-                              camera_params: Optional[dict]=None) -> Tuple[np.ndarray, bool, Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
-        """
+    def detect_hand_keypoints(self, 
+                              img: np.ndarray,
+                              visualize: bool=False, 
+                              visualize_3d: bool=False, 
+                              pause_visualization: bool=True, 
+                              use_vitposes: bool=False,
+                              hand_type: HandType=HandType.LEFT,
+                              camera_params: Optional[dict]=None) -> Optional[dict]:
+        """"
         Detect the hand keypoints in the image.
         """
-        bboxes, is_right = self.get_bboxes_for_hamer(img)
-        if bboxes is None:
-            print("hamer bbox is none")
-            return img, False, None, None, None, None, None, None, None, None, None
-        
         try:
-            if len(bboxes) == 0:
-                print("hamer bbox is none")
-                return img, False, None, None, None, None, None, None, None, None, None
-        except:
-            print("hamer bbox is none")
-            return img, False, None, None, None, None, None, None, None, None, None
-    
+            bboxes, is_right, debug_bboxes = self.get_bboxes_for_hamer(img, hand_type=hand_type, use_vitposes=use_vitposes)
+        except ValueError as e:
+            logger.debug(f"Error: {e}")
+            return None
+            
         scaled_focal_length, camera_center = self.get_image_params(img, camera_params)
 
         dataset = ViTDetDataset(self.model_cfg, img, bboxes, is_right, rescale_factor=self.rescale_factor)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=0)
 
-
         list_2d_kpts, list_3d_kpts, list_verts = [], [], []
+        kpts_2d_hamer = None
         for batch in dataloader:
             batch = recursive_to(batch, "cuda")
             with torch.no_grad():
@@ -88,48 +96,50 @@ class DetectorHamer:
 
             for idx in range(len(T_cam_pred_all)):
                 kpts_3d = out["pred_keypoints_3d"][idx].detach().cpu().numpy()  # [21, 3]
-                # Make everything left
-                kpts_3d[:,0] = -1*kpts_3d[:,0]
                 verts = out["pred_vertices"][idx].detach().cpu().numpy()  # [778, 3]
-                verts[:,0] = -1*verts[:,0]
                 is_right = batch["right"][idx].cpu().numpy()
                 global_orient = out["pred_mano_params"]["global_orient"][idx].detach().cpu().numpy()
 
+                if hand_type == HandType.LEFT:
+                    kpts_3d, verts = DetectorHamer.convert_right_hand_keypoints_to_left_hand(kpts_3d, verts)
+
                 T_cam_pred = T_cam_pred_all[idx]
 
-                W_H_shapes = batch["img_size"].float() 
-                img_w = W_H_shapes[idx][0]
-                img_h = W_H_shapes[idx][1]
+                img_w, img_h = batch["img_size"][idx].float()
 
                 kpts_2d_hamer = DetectorHamer.project_3d_kpt_to_2d(kpts_3d, img_w, img_h, scaled_focal_length, 
                                                             camera_center, T_cam_pred)
 
-
+                T_cam_pred = T_cam_pred.cpu().numpy()
                 list_2d_kpts.append(kpts_2d_hamer)
-
-                # Need to add the T_cam_pred to the 3D keypoints after projecting to 2D
-                kpts_3d += T_cam_pred_all[idx].cpu().numpy()
-                list_3d_kpts.append(kpts_3d)
-
-                verts += T_cam_pred_all[idx].cpu().numpy()
-                list_verts.append(verts)
+                list_3d_kpts.append(kpts_3d + T_cam_pred)
+                list_verts.append(verts + T_cam_pred)
 
         annotated_img = DetectorHamer.visualize_2d_kpt_on_img(
             kpts_2d=list_2d_kpts[0],
             img=img,
         )
+        annotated_img = DetectorHamer.annotate_bboxes_on_img(annotated_img, debug_bboxes)
         if visualize:
-            # cv2.imwrite(os.path.join(path, '%05d.png'%frame_idx), annotated_img)
             cv2.imshow("Annotated Image", annotated_img)
-            if visualize_wait:
-                cv2.waitKey(0)
-            else:
-                cv2.waitKey(1)
+            cv2.waitKey(0 if pause_visualization else 1)
 
         if visualize_3d:
             DetectorHamer.visualize_keypoints_3d(annotated_img, list_3d_kpts[0], list_verts[0])
 
-        return annotated_img, True, list_3d_kpts[0], list_2d_kpts[0], list_verts[0], T_cam_pred_all[0], scaled_focal_length, camera_center, W_H_shapes[0][0], W_H_shapes[0][1], global_orient[0]
+        return {
+            "annotated_img": annotated_img,
+            "success": True,
+            "kpts_3d": list_3d_kpts[0],
+            "kpts_2d": list_2d_kpts[0],
+            "verts": list_verts[0],
+            "T_cam_pred": T_cam_pred_all[0],
+            "scaled_focal_length": scaled_focal_length,
+            "camera_center": camera_center,
+            "img_w": img_w,
+            "img_h": img_h,
+            "global_orient": global_orient
+        }
     
 
     def get_image_params(self, img: np.ndarray, camera_params: Optional[dict]) -> Tuple[float, torch.Tensor]:
@@ -148,6 +158,168 @@ class DetectorHamer:
                                    * max(img_w, img_h))
             camera_center = torch.tensor([img_w, img_h], dtype=torch.float).reshape(1, 2) / 2.0
         return scaled_focal_length, camera_center
+    
+
+    def get_bboxes_for_hamer(self, img: np.ndarray, hand_type: HandType, use_vitposes: bool = True) -> Tuple[np.ndarray, np.ndarray, dict]:
+        """
+        Get bounding boxes of the hands in the image for HaMeR.
+        """
+        # Get initial bounding boxes
+        bboxes, scores, debug_bboxes = self.get_bboxes(img)
+        if bboxes.size == 0:
+            raise ValueError("No bounding boxes found")
+         
+        if not use_vitposes:
+            is_right = self._assign_hand_type(bboxes, hand_type)
+            return bboxes, is_right, debug_bboxes
+        
+        # Refine the bounding boxes with vitposes to identify the hand type
+        vitposes_out = self.get_human_vitposes(img, bboxes, scores)
+        refined_bboxes, is_right = DetectorHamer.refine_bboxes(vitposes_out)
+        debug_bboxes["refined_bboxes"] = refined_bboxes
+        
+        if refined_bboxes.size == 0:
+            if use_vitposes:
+                raise ValueError("Vitposes did not return any bounding boxes")
+            else:
+                logger.debug("Warning: Vitposes did not return any bounding boxes")
+                is_right = self._assign_hand_type(bboxes, hand_type)
+                return bboxes, is_right, debug_bboxes
+
+        # Filter the bounding boxes by hand type 
+        filtered_bboxes, is_right = DetectorHamer._filter_bboxes_by_hand(refined_bboxes, is_right, hand_type)
+        debug_bboxes["filtered_bboxes"] = filtered_bboxes
+        if filtered_bboxes.size == 0:
+            if use_vitposes:
+                raise ValueError("Vitposes did not return any bounding boxes of the correct hand")
+            else:
+                logger.debug("Warning: Vitposes did not return any bounding boxes of the correct hand")
+                is_right = self._assign_hand_type(bboxes, hand_type)
+                return bboxes, is_right, debug_bboxes
+            
+        return filtered_bboxes, is_right, debug_bboxes
+ 
+
+    def get_bboxes(self, img: np.ndarray, use_dino: bool=True, 
+                   use_detectron: bool=True, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray, dict]:
+        """
+        Get bounding boxes around the hands using the Dino or Detectron detectors
+        """
+        debug_bboxes = {}
+
+        if use_dino:
+            dino_bboxes, dino_scores = self.dino_detector.get_bboxes(img, "hand", threshold=0.8, visualize=visualize)
+            debug_bboxes["dino_bboxes"] = (np.array(dino_bboxes), dino_scores)
+
+        if use_detectron:
+            det_bboxes, det_scores = self.detectron_detector.get_bboxes(img, visualize=visualize)
+            debug_bboxes["det_bboxes"] = (np.array(det_bboxes), det_scores)
+
+        if (use_dino and len(dino_bboxes) > 0) and (use_detectron and len(det_bboxes) > 0):
+            bboxes = np.vstack([dino_bboxes, det_bboxes])
+            scores = np.concatenate([dino_scores, det_scores])
+        elif use_dino and dino_bboxes is not None:
+            bboxes, scores = np.array(dino_bboxes), np.array(dino_scores)
+        elif use_detectron and det_bboxes is not None:
+            bboxes, scores = det_bboxes, det_scores
+
+        if len(scores.shape) == 1:
+            scores = scores[:, None]
+
+        return bboxes, scores, debug_bboxes
+    
+
+    def get_human_vitposes(self, img: np.ndarray, bboxes: np.ndarray, scores: np.ndarray) -> list:
+        """
+        Get the human keypoints using the ViTPose model.
+        """
+        return self.cpm.predict_pose(img, [np.concatenate([bboxes,scores], axis=1)],)
+    
+    
+    @staticmethod
+    def _filter_bboxes_by_hand(bboxes: np.ndarray, is_right: np.ndarray, hand_type: HandType) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Filter the bounding boxes by hand type.
+        """
+        if hand_type == HandType.LEFT:
+            filtered_bboxes = bboxes[~is_right]
+            is_right = is_right[is_right == False]
+        else:
+            filtered_bboxes = bboxes[is_right]
+            is_right = is_right[is_right == True]
+        return filtered_bboxes, is_right
+
+    
+    @staticmethod
+    def _assign_hand_type(bboxes: np.ndarray, hand_type: HandType) -> np.ndarray:
+        """
+        Assign the hand type to the bounding boxes.
+        """
+        if hand_type == HandType.LEFT:
+            is_right = np.array([False]*len(bboxes))
+        else:
+            is_right = np.array([True]*len(bboxes))
+        return is_right
+
+    
+    @staticmethod
+    def evaluate_hand_vitposes(vitposes: dict, 
+                               n_valid_pts_thresh: int=3) -> Tuple[Optional[list], Optional[list], Optional[list]]:
+        """
+        Evaluate the hand keypoints predicted by vitposes.
+        """
+        left_hand_keypoint = vitposes["keypoints"][-42:-21]
+        right_hand_keypoint = vitposes["keypoints"][-21:]
+
+        confidence_thresh = 0.5
+        n_valid_left_pts = np.sum(left_hand_keypoint[:, 2] > confidence_thresh)
+        n_valid_right_pts = np.sum(right_hand_keypoint[:, 2] > confidence_thresh)
+        if (n_valid_left_pts < n_valid_pts_thresh) and (n_valid_right_pts < n_valid_pts_thresh):
+            return None, None, None
+        
+        bboxes = []
+        is_right: list[bool] = []
+        confidences = []
+        if n_valid_left_pts > n_valid_pts_thresh:
+            bbox, confidence = DetectorHamer.get_bbox_from_keypoints(left_hand_keypoint, confidence_thresh)
+            bboxes.append(bbox)
+            is_right.append(False)
+            confidences.append(confidence)
+
+        if n_valid_right_pts > n_valid_pts_thresh:
+            bbox, confidence = DetectorHamer.get_bbox_from_keypoints(right_hand_keypoint, confidence_thresh)
+            bboxes.append(bbox)
+            is_right.append(True)
+            confidences.append(confidence)
+
+        return bboxes, is_right, confidences
+    
+    @staticmethod
+    def get_bboxes_from_vitposes(vitposes_out) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Get bounding boxes around the hand key points predicted by vitposes.
+        """
+        bboxes = []
+        is_right: list[bool] = []
+        idx_to_confidence = []
+        idx = 0
+        for vitposes in vitposes_out:
+            sub_bboxes, sub_is_right, sub_confidences = DetectorHamer.evaluate_hand_vitposes(vitposes)
+            if sub_bboxes is not None and sub_is_right is not None and sub_confidences is not None:
+                bboxes.extend(sub_bboxes)
+                is_right.extend(sub_is_right)
+                for confidence in sub_confidences:
+                    idx_to_confidence.append((idx, confidence))
+                    idx += 1
+
+        return np.array(bboxes), np.array(is_right), np.array(idx_to_confidence)
+    
+
+    @staticmethod
+    def convert_right_hand_keypoints_to_left_hand(kpts, verts):
+        kpts[:,0] = -kpts[:,0]
+        verts[:,0] = -verts[:,0]
+        return kpts, verts
 
     @staticmethod
     def visualize_keypoints_3d(annotated_img: np.ndarray, kpts_3d: np.ndarray, verts: np.ndarray) -> None:
@@ -184,7 +356,7 @@ class DetectorHamer:
         box_center = batch["box_center"].float()
         box_size = batch["box_size"].float()
         # NOTE: FOR HaMeR, they are using the img_size as (W, H)
-        W_H_shapes = batch["img_size"].float()  # (2, 2): full image size (2208, 1242)
+        W_H_shapes = batch["img_size"].float() 
 
         multiplier = 2 * batch["right"] - 1
 
@@ -194,121 +366,6 @@ class DetectorHamer:
         )
 
         return T_cam_pred_all
-    
-    def get_bboxes_for_hamer(self, img: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Get bounding boxes of the hands in the image for HaMeR.
-        """
-        # Get initial bounding boxes
-        bboxes, scores = self.get_bboxes(img)
-
-        if len(bboxes) == 0:
-            print("initial bbox failed")
-            return np.ndarray([]), np.ndarray([])
- 
-        # Detect keypoints inside bounding boxes
-        vitposes_out = self.get_human_vitposes(img, bboxes, scores)
-
-        # Refine bounding boxes based on keypoints
-        refined_bboxes, is_right, idx_to_confidence = self.get_bboxes_from_vitposes(vitposes_out)
-        refined_bboxes, is_right = DetectorHamer.sort_bboxes(refined_bboxes, is_right, idx_to_confidence)
-
-        if len(refined_bboxes) > 0:
-            bboxes = refined_bboxes
-        # if len(bboxes) == 0:
-        #     print("refined bbox failed")
-        #     return None, None
-        # Make everything left
-            bboxes = bboxes[~is_right]
-            is_right = is_right[is_right == False]
-        else:
-            is_right = np.array([False]*len(bboxes))
-        
-        return bboxes, is_right
-
-    
-    def get_bboxes(self, img: np.ndarray, use_dino: bool=True, 
-                   use_detectron: bool=False, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Get bounding boxes around the hands using the Dino or Detectron detectors
-        """
-        # img = img[81:1161, 144:2064, :]
-        if use_dino:
-            dino_bboxes, dino_scores = self.dino_detector.get_bboxes(img, "hand", threshold=0.2, visualize=visualize)
-
-        if use_detectron:
-            det_bboxes, det_scores = self.detectron_detector.get_bboxes(img, visualize=visualize)
-
-        if (use_dino and dino_bboxes is not None) and (use_detectron and det_bboxes is not None):
-            bboxes = np.vstack([dino_bboxes, det_bboxes])
-            scores = np.concatenate([dino_scores, det_scores])
-        elif use_dino and dino_bboxes is not None:
-            bboxes, scores = np.array(dino_bboxes), np.array(dino_scores)
-        elif use_detectron and det_bboxes is not None:
-            bboxes, scores = det_bboxes, det_scores
-
-        if len(scores.shape) == 1:
-            scores = scores[:, None]
-
-        return bboxes, scores
-    
-    def get_human_vitposes(self, img: np.ndarray, bboxes: np.ndarray, scores: np.ndarray) -> list:
-        """
-        Get the human keypoints using the ViTPose model.
-        """
-        return self.cpm.predict_pose(img, [np.concatenate([bboxes,scores], axis=1)],)
-    
-    
-    def evaluate_hand_vitposes(self, vitposes: dict, 
-                               n_valid_pts_thresh: int=3) -> Tuple[Optional[list], Optional[list], Optional[list]]:
-        """
-        Evaluate the hand keypoints predicted by vitposes.
-        """
-        left_hand_keypoint = vitposes["keypoints"][-42:-21]
-        right_hand_keypoint = vitposes["keypoints"][-21:]
-
-        confidence_thresh = 0.5
-        n_valid_left_pts = np.sum(left_hand_keypoint[:, 2] > confidence_thresh)
-        n_valid_right_pts = np.sum(right_hand_keypoint[:, 2] > confidence_thresh)
-        if (n_valid_left_pts < n_valid_pts_thresh) and (n_valid_right_pts < n_valid_pts_thresh):
-            return None, None, None
-        
-        bboxes = []
-        is_right: list[bool] = []
-        confidences = []
-        if n_valid_left_pts > n_valid_pts_thresh:
-            bbox, confidence = DetectorHamer.get_bbox_from_keypoints(left_hand_keypoint, confidence_thresh)
-            bboxes.append(bbox)
-            is_right.append(False)
-            confidences.append(confidence)
-
-        if n_valid_right_pts > n_valid_pts_thresh:
-            bbox, confidence = DetectorHamer.get_bbox_from_keypoints(right_hand_keypoint, confidence_thresh)
-            bboxes.append(bbox)
-            is_right.append(True)
-            confidences.append(confidence)
-
-        return bboxes, is_right, confidences
-    
-    def get_bboxes_from_vitposes(self, vitposes_out) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Get bounding boxes around the hand key points predicted by vitposes.
-        """
-        bboxes = []
-        is_right: list[bool] = []
-        idx_to_confidence = []
-        idx = 0
-        for vitposes in vitposes_out:
-            sub_bboxes, sub_is_right, sub_confidences = self.evaluate_hand_vitposes(vitposes)
-            if sub_bboxes is not None and sub_is_right is not None and sub_confidences is not None:
-                bboxes.extend(sub_bboxes)
-                is_right.extend(sub_is_right)
-                for confidence in sub_confidences:
-                    idx_to_confidence.append((idx, confidence))
-                    idx += 1
-
-        return np.array(bboxes), np.array(is_right), np.array(idx_to_confidence)
-    
 
     @staticmethod
     def visualize_2d_kpt_on_img(kpts_2d: np.ndarray, img: np.ndarray) -> np.ndarray:
@@ -371,6 +428,12 @@ class DetectorHamer:
         kpts_2d = kpts_2d[0].cpu().numpy()
 
         return kpts_2d
+    
+    @staticmethod
+    def refine_bboxes(vitposes_out) -> Tuple[np.ndarray, np.ndarray]:
+        refined_bboxes, is_right, idx_to_confidence = DetectorHamer.get_bboxes_from_vitposes(vitposes_out)
+        refined_bboxes, is_right = DetectorHamer.sort_bboxes(refined_bboxes, is_right, idx_to_confidence)
+        return refined_bboxes, is_right
 
 
     @staticmethod
@@ -395,6 +458,73 @@ class DetectorHamer:
                          keypoints[valid_idx, 0].max(), keypoints[valid_idx, 1].max()])
         confidence = sum(keypoints[valid_idx, 2])
         return bbox, confidence
+    
+
+    @staticmethod
+    def annotate_bboxes_on_img(img: np.ndarray, debug_bboxes: dict) -> np.ndarray:
+        """
+        Annotate bounding boxes on the image.
+
+        :param img: Input image (numpy array)
+        :param debug_bboxes: Dictionary containing different sets of bounding boxes and optional scores
+        :return: Annotated image
+        """
+        color_dict = {
+            "dino_bboxes": (0, 255, 0),
+            "det_bboxes": (0, 0, 255),
+            "refined_bboxes": (255, 0, 0),
+            "filtered_bboxes": (255, 255, 0),
+        }
+        corner_dict = {
+            "dino_bboxes": "top_left",
+            "det_bboxes": "top_right",
+            "refined_bboxes": "bottom_left",
+            "filtered_bboxes": "bottom_right",
+        }
+        
+        def draw_bbox_and_label(bbox, label, color, label_pos, include_label=True):
+            """ Helper function to draw the bounding box and add label """
+            cv2.rectangle(
+                img,
+                (int(bbox[0]), int(bbox[1])),
+                (int(bbox[2]), int(bbox[3])),
+                color,
+                2,
+            )
+            if include_label:
+                cv2.putText(
+                    img, label, label_pos, 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA
+                )
+
+        label_pos_dict = {
+            "top_left": lambda bbox: (int(bbox[0]), int(bbox[1]) - 10),
+            "bottom_right": lambda bbox: (int(bbox[2]) - 150, int(bbox[3]) - 10),
+            "top_right": lambda bbox: (int(bbox[2]) - 150, int(bbox[1]) - 10),
+            "bottom_left": lambda bbox: (int(bbox[0]), int(bbox[3]) - 10),
+        }
+
+        for key, value in debug_bboxes.items():
+            # Unpack bboxes and scores
+            if key in ["dino_bboxes", "det_bboxes"]:
+                bboxes, scores = value
+            else:
+                bboxes = value
+                scores = [None] * len(bboxes)  
+
+            color = color_dict.get(key, (0, 0, 0)) 
+            label_pos_fn = label_pos_dict[corner_dict.get(key, "top_left")]
+
+            # Draw each bounding box and its label
+            for idx, bbox in enumerate(bboxes):
+                score_text = f" {scores[idx]:.3f}" if scores[idx] is not None else ""
+                label = key.split("_")[0] + score_text
+
+                # Draw bounding box and label on the image
+                label_pos = label_pos_fn(bbox)
+                if key in ["dino_bboxes", "det_bboxes"] or idx == 0:
+                    draw_bbox_and_label(bbox, label, color, label_pos)
+        return img
 
 
     @staticmethod
@@ -444,11 +574,15 @@ if __name__ == "__main__":
 
     detector = DetectorHamer()
 
-    for idx in np.arange(10,99):
-        img_path = os.path.join(root_folder, f"human_shadow/data/videos/demo_marion_calib_2/0/video_0_L/000{idx}.jpg")
+    image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo_marion_calib_2/0/video_0_L/*.jpg"))
+    # image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg"))
+    image_paths = sorted(image_paths, key=lambda x: int(os.path.basename(x).split(".")[0]))
+
+    for idx, img_path in enumerate(image_paths):
+        print("Idx: ", idx)
         img = media.read_image(img_path)
 
-        detector.detect_hand_keypoints(img, 0, visualize=True, visualize_3d=False, visualize_wait=False, camera_params=camera_params) 
+        detector.detect_hand_keypoints(img, hand_type=HandType.LEFT, visualize=True, visualize_3d=False, pause_visualization=False, camera_params=camera_params) 
 
 
 
