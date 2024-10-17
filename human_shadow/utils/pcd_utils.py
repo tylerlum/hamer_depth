@@ -48,7 +48,7 @@ def global_registration(source_pcd, target_pcd, voxel_size):
     return result_ransac
 
 
-def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registration=True, init_transform=None, transition=None):
+def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registration=True, init_transform=None):
     """
     Register two point clouds using ICP algorithm. 
     """
@@ -74,7 +74,6 @@ def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registr
         except:
             return source_pcd, None
         init_transform = result_ransac.transformation
-        # init_transform = (transition+init_transform)/2
         result_icp = o3d.pipelines.registration.registration_icp(
             source=source_pcd, target=target_pcd, max_correspondence_distance=max_correspondence_distance, 
             init=init_transform,
@@ -97,7 +96,7 @@ def get_visible_points(mesh, origin):
     visible_triangles = mesh.faces[visible_triangle_indices]
     visible_vertex_indices = np.unique(visible_triangles)
     visible_points = pts[visible_vertex_indices]
-    return visible_points, visible_vertex_indices
+    return np.array(visible_points).astype(np.float32), np.array(visible_vertex_indices)
 
 
 def get_pcd_from_points(points, colors=None):
@@ -182,6 +181,25 @@ def get_3D_point_from_pixel(px, py, depth, intrinsics):
         p = np.stack((X, Y, depth), axis=1)
 
     return p
+
+
+def get_3D_points_from_pixels(pixels_2d, depth_map, intrinsics):
+    """
+    Convert an array of pixel coordinates and depth map to 3D points.
+    """
+    px = pixels_2d[:, 0]
+    py = pixels_2d[:, 1]
+
+    x = (px - intrinsics["cx"]) / intrinsics["fx"]
+    y = (py - intrinsics["cy"]) / intrinsics["fy"]
+
+    depth = depth_map[py, px]
+
+    X = x * depth
+    Y = y * depth
+
+    points_3d = np.stack((X, Y, depth), axis=1)
+    return points_3d
 
 
 def get_point_cloud_of_segmask(mask, depth_img, img, intrinsics, visualize=False):

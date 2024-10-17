@@ -17,11 +17,9 @@ from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 from sam2.build_sam import build_sam2_video_predictor
 
-from human_shadow.detector_dino import DetectorDino
+from human_shadow.detectors.detector_dino import DetectorDino
+from human_shadow.detectors.detector_hamer import DetectorHamer
 from human_shadow.utils.file_utils import get_parent_folder_of_package
-from detector_hamer import DetectorHamer
-import mediapy as media
-from PIL import Image, ImageChops
 
 
 class DetectorSam2:
@@ -35,7 +33,7 @@ class DetectorSam2:
     def segment_frame(self, frame: np.ndarray, positive_pts: Optional[np.ndarray]=None,
                       negative_pts: Optional[np.ndarray]=None,
                       bbox_pts: Optional[np.ndarray]=None, multimask_output: bool=True, 
-                      visualize: bool=False) -> Tuple[np.ndarray, np.ndarray]:
+                      visualize: bool=False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         img = frame.copy()
         if positive_pts is not None and negative_pts is not None:
             point_coords = np.concatenate([positive_pts, negative_pts], axis=0)
@@ -66,7 +64,7 @@ class DetectorSam2:
             
         return masks, scores, img_arr
     
-    def segment_video(self, video_dir: str, bbox, bbox_ctr: np.ndarray, visualize: bool=False, start_idx: int=0, path:str=None) -> None:
+    def segment_video(self, video_dir: str, bbox, bbox_ctr: np.ndarray, start_idx: int=0):
         frame_names = os.listdir(video_dir)
         frame_names = sorted(frame_names)
         with torch.inference_mode(), torch.autocast(self.device, dtype=torch.bfloat16):
@@ -98,21 +96,17 @@ class DetectorSam2:
                     for i, out_obj_id in enumerate(out_obj_ids)
                 }
 
-        if visualize:
-            vis_frame_stride = 30
-            frame_indices = list(video_segments.keys())
-            frame_indices.sort()
-            # for out_frame_idx in range(0, len(frame_names), vis_frame_stride):
-            list_annotated_imgs = []
-            for out_frame_idx in frame_indices:
-                img = Image.open(os.path.join(video_dir, frame_names[out_frame_idx]))
-                img_arr = np.array(img)
-                mask = video_segments[out_frame_idx][0]
-                img_arr[mask[0]] = (0, 0, 0)
-                list_annotated_imgs.append(img_arr)
-                media.write_image(os.path.join(path, '%05d.png'%out_frame_idx), img_arr)
-            # media.write_video("annotated_sam.mp4", list_annotated_imgs, fps=10)
-        return video_segments
+        frame_indices = list(video_segments.keys())
+        frame_indices.sort()
+        list_annotated_imgs = []
+        for out_frame_idx in frame_indices:
+            img = Image.open(os.path.join(video_dir, frame_names[out_frame_idx]))
+            img_arr = np.array(img)
+            mask = video_segments[out_frame_idx][0]
+            img_arr[mask[0]] = (0, 0, 0)
+            list_annotated_imgs.append(img_arr)
+
+        return video_segments, np.array(list_annotated_imgs)
             
 
     @staticmethod
@@ -221,6 +215,6 @@ if __name__ == "__main__":
         bbox = detector.get_best_bbox(frame, "hand")
     if bbox is not None:
         detector_hamer = DetectorHamer()
-        annotated_img, success, kpts_3d, kpts_2d, verts, T_cam_pred, scaled_focal_length, camera_center, img_w, img_h = detector_hamer.detect_hand_keypoints(frame, 
-                                                                                           visualize=False)
-        segmentor.segment_video(video_folder, bbox=bbox, bbox_ctr=kpts_2d.astype(np.int32), visualize=True, start_idx=71)
+        annotated_img, success, kpts_3d, kpts_2d, verts, T_cam_pred, scaled_focal_length, camera_center, img_w, img_h = detector_hamer.detect_hand_keypoints(frame, visualize=False)
+        
+        segmentor.segment_video(video_folder, bbox=bbox, bbox_ctr=kpts_2d.astype(np.int32), start_idx=71)

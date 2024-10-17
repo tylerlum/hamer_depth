@@ -3,6 +3,7 @@ Wrapper around DINO for object detection
 """
 import os
 import pdb
+import glob
 from typing import List, Tuple, Optional
 import numpy as np
 
@@ -24,7 +25,7 @@ class DetectorDino:
 
 
     def get_bboxes(self, frame: np.ndarray, object_name: str, threshold: float = 0.4, 
-                   visualize: bool = False, visualize_wait: bool = True) -> Tuple[List[np.ndarray], List[np.float32]]:
+                   visualize: bool = False, pause_visualization: bool = True) -> Tuple[List[np.ndarray], List[np.float32]]:
         img_pil = Image.fromarray(frame)
         labels = [f"{object_name}."]
         results = self.detector(img_pil, candidate_labels=labels, threshold=threshold)
@@ -54,7 +55,7 @@ class DetectorDino:
                             2,
                             cv2.LINE_AA)
             cv2.imshow("Detection", img_bgr)
-            if visualize_wait:
+            if pause_visualization:
                 cv2.waitKey(0)
             else:
                 cv2.waitKey(1)
@@ -62,7 +63,7 @@ class DetectorDino:
 
 
     def get_best_bbox(self, frame: np.ndarray, object_name: str, threshold: float = 0.4, 
-               visualize: bool = False, visualize_wait: bool = True) -> Optional[np.ndarray]:
+               visualize: bool = False, pause_visualization: bool = True) -> Optional[np.ndarray]:
         bboxes, scores = self.get_bboxes(frame, object_name, threshold)
         if len(bboxes) == 0:
             return None
@@ -88,7 +89,7 @@ class DetectorDino:
                     2,
                     cv2.LINE_AA)
             cv2.imshow("Detection", img_bgr)
-            if visualize_wait:
+            if pause_visualization:
                 cv2.waitKey(0)
             else:
                 cv2.waitKey(1)
@@ -100,16 +101,17 @@ if __name__ == "__main__":
     detector_id = "IDEA-Research/grounding-dino-tiny"
     detector = DetectorDino(detector_id)
 
-    video_folder = "/juno/u/lepertm/shadow/human_shadow/human_shadow/data/videos/demo_marion_calib/0"
-    left_video_path = os.path.join(video_folder, f"video_0_L_preprocessed.mp4")
-    left_imgs = np.array(media.read_video(left_video_path))
-    detector.get_bboxes(left_imgs[0], "hand", visualize=True, visualize_wait=True)
-    pdb.set_trace()
+    # video_folder = "/juno/u/lepertm/shadow/human_shadow/human_shadow/data/videos/demo_marion_calib/0"
+    # left_video_path = os.path.join(video_folder, f"video_0_L_preprocessed.mp4")
+    # left_imgs = np.array(media.read_video(left_video_path))
+    # detector.get_bboxes(left_imgs[0], "hand", visualize=True, visualize_wait=True)
+    # pdb.set_trace()
 
-    indices = np.arange(13, 40)
-    for idx in indices:
-        img_path = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L/000{idx}.jpg")
+    image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg"))
+    image_paths = sorted(image_paths, key=lambda x: int(os.path.basename(x).split(".")[0]))
 
+
+    for img_path in image_paths:
         frame = media.read_image(img_path)
         # detector.get_best_bbox(frame, "hand", visualize=True)
-        detector.get_bboxes(frame, "hand", threshold=0.2, visualize=True, visualize_wait=False)
+        detector.get_bboxes(frame, "hand", threshold=0.2, visualize=True, pause_visualization=False)

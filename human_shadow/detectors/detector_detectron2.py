@@ -4,6 +4,7 @@ Wrapper around detectron2 for object detection
 
 import pdb 
 import os
+import glob
 import numpy as np
 from pathlib import Path
 from typing import Tuple
@@ -126,10 +127,13 @@ class DetectorDetectron2:
 if __name__ == "__main__":
     root_folder = get_parent_folder_of_package("human_shadow")
     detector = DetectorDetectron2(root_dir=root_folder)
-    indices = np.arange(13, 40)
-    for idx in indices:
-        img_path = os.path.join(root_folder, f"human_shadow/data/videos/demo1/video_0_L/000{idx}.jpg")
 
+    image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo_marion_calib_2/0/video_0_L/*.jpg"))
+    # image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg"))
+    image_paths = sorted(image_paths, key=lambda x: int(os.path.basename(x).split(".")[0]))
+
+
+    for img_path in image_paths:
         frame = media.read_image(img_path)
 
         # detector.get_best_bbox(frame, visualize=True)

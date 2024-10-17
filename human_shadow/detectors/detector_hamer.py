@@ -41,6 +41,9 @@ class HandType(Enum):
     LEFT = "left"
     RIGHT = "right"
 
+THUMB_VERTEX = 756
+INDEX_FINGER_VERTEX = 350
+
 class DetectorHamer:
     def __init__(self):
         root_dir = get_parent_folder_of_package("hamer")
@@ -59,9 +62,8 @@ class DetectorHamer:
         # Load bounding box detectors
         self.dino_detector = DetectorDino("IDEA-Research/grounding-dino-base")
         self.detectron_detector = DetectorDetectron2(root_dir)
-        self.faces = self.model.mano.faces
-        self.faces_left = self.faces[:,[0,2,1]]
-        self.renderer = Renderer(self.model_cfg, faces=self.model.mano.faces)
+        self.faces_right = self.model.mano.faces
+        self.faces_left = self.faces_right[:,[0,2,1]]
 
     def detect_hand_keypoints(self, 
                               img: np.ndarray,
@@ -74,12 +76,8 @@ class DetectorHamer:
         """"
         Detect the hand keypoints in the image.
         """
-        try:
-            bboxes, is_right, debug_bboxes = self.get_bboxes_for_hamer(img, hand_type=hand_type, use_vitposes=use_vitposes)
-        except ValueError as e:
-            logger.debug(f"Error: {e}")
-            return None
-            
+        bboxes, is_right, debug_bboxes = self.get_bboxes_for_hamer(img, hand_type=hand_type, use_vitposes=use_vitposes)
+    
         scaled_focal_length, camera_center = self.get_image_params(img, camera_params)
 
         dataset = ViTDetDataset(self.model_cfg, img, bboxes, is_right, rescale_factor=self.rescale_factor)
@@ -129,9 +127,9 @@ class DetectorHamer:
 
         return {
             "annotated_img": annotated_img,
-            "success": True,
+            "success": len(list_2d_kpts[0]) == 21,
             "kpts_3d": list_3d_kpts[0],
-            "kpts_2d": list_2d_kpts[0],
+            "kpts_2d": np.rint(list_2d_kpts[0]).astype(np.int32),
             "verts": list_verts[0],
             "T_cam_pred": T_cam_pred_all[0],
             "scaled_focal_length": scaled_focal_length,
@@ -427,7 +425,7 @@ class DetectorHamer:
             ).reshape(batch_size, -1, 2)
         kpts_2d = kpts_2d[0].cpu().numpy()
 
-        return kpts_2d
+        return np.rint(kpts_2d).astype(np.int32)
     
     @staticmethod
     def refine_bboxes(vitposes_out) -> Tuple[np.ndarray, np.ndarray]:

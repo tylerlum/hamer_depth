@@ -15,10 +15,10 @@ import mediapy as media
 import ctrlutils
 import mmt.stereo_inference.python.simple_inference as stereo_to_depth
 
-from human_shadow.detector_dino import DetectorDino
-from human_shadow.detector_detectron2 import DetectorDetectron2
-from human_shadow.detector_hamer import DetectorHamer
-from human_shadow.detector_sam2 import DetectorSam2
+from human_shadow.detectors.detector_dino import DetectorDino
+from human_shadow.detectors.detector_detectron2 import DetectorDetectron2
+from human_shadow.detectors.detector_hamer import DetectorHamer
+from human_shadow.detectors.detector_sam2 import DetectorSam2
 from human_shadow.utils.pcd_utils import *
 from human_shadow.config.redis_keys import *
 from human_shadow.camera.zed_utils import *
@@ -56,12 +56,20 @@ def get_hand_pose(detector_bbox, detector_hamer, segmentor, image, depth, intrin
     bbox = detector_bbox.get_best_bbox(img_rgb, "arm", threshold=0.2)
 
     # Detect hand keypoints
-    annotated_img, success, kpts_3d, kpts_2d, verts, T_cam_pred, scaled_focal_length, camera_center, img_w, img_h, global_orient = detector_hamer.detect_hand_keypoints(img_rgb, frame_idx=0,
-                                                                                           visualize=False)
+    hamer_out = detector_hamer.detect_hand_keypoints(img_rgb)
 
-    if not success:
+    if not hamer_out["success"]:
         print('Failed!')
         return None, None, None, None, None
+    
+    kpts_2d = hamer_out["kpts_2d"]
+    verts = hamer_out["verts"]
+    T_cam_pred = hamer_out["T_cam_pred"]
+    scaled_focal_length = hamer_out["scaled_focal_length"]
+    camera_center = hamer_out["camera_center"]
+    img_w = hamer_out["img_w"]
+    img_h = hamer_out["img_h"]
+    global_orient = hamer_out["global_orient"]
 
 
     # Segment hand
@@ -187,8 +195,6 @@ def main(args):
     video_path = os.path.join(video_folder, "video_0_L.mp4")
     imgs_left_rgb = np.array(media.read_video(video_path))
     depth_img_arr = np.load(os.path.join(video_folder, "depth_0.npy"))
-
-    pdb.set_trace()
 
     intrinsics_path = os.path.join(video_folder, "cam_intrinsics_0.json")
     K_left = get_intrinsics_from_json(intrinsics_path)
