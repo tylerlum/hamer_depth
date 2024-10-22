@@ -21,7 +21,6 @@ from robosuite.controllers import load_controller_config
 from robomimic.envs.env_robosuite import EnvRobosuite
 import robomimic.utils.obs_utils as ObsUtils
 
-print("done with imports")
 
 
 def get_action_from_ee_pose_panda(ee_pos, ee_quat_xyzw, gripper_action, gripper, mode="ee", use_base_offset=False):

@@ -21,6 +21,20 @@ python hand_pose_live.py
 ```
 This file will run hand pose estimation for live images. Please update the image, depth and intrinsics in it. 
 
+
+### 3D Hand pose estimation video processing
+```
+python video_preprocessing.py
+```
+2. Run hand_pose_verify.py to get all the prediction results and visualization images.
+```
+python hand_pose_verify.py
+```
+3. Get full visualization video.
+```
+python generate_full_visualization.py
+```
+
 ## Data collection 
 ### View ZED camera images live
  ```

@@ -15,6 +15,10 @@
 */data/*
 */outputs/*
 _DATA/*
+**/debug_images/*
+**/debug_images2/*
+**/debug_images3/*
+**/debug_images4/*
 
 __pycache__/*
 
