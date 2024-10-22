@@ -7,6 +7,7 @@ Adapted from Zi-ang-Cao's code and original HaMeR code.
 import os
 import pdb
 import glob
+from tqdm import tqdm
 from enum import Enum
 import json
 import logging
@@ -576,7 +577,7 @@ if __name__ == "__main__":
     # image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg"))
     image_paths = sorted(image_paths, key=lambda x: int(os.path.basename(x).split(".")[0]))
 
-    for idx, img_path in enumerate(image_paths):
+    for idx, img_path in tqdm(enumerate(image_paths)):
         print("Idx: ", idx)
         img = media.read_image(img_path)
 

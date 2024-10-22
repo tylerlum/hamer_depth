@@ -16,6 +16,13 @@ ZED_RESOLUTIONS = {
     "HD2K": ZEDResolution.HD2K,
     }
 
+ZED_RESOLUTIONS_SQUARE_SIZE = {
+    480: ZEDResolution.SD,
+    720: ZEDResolution.HD720,
+    1080: ZEDResolution.HD1080,
+    1242: ZEDResolution.HD2K,
+    }
+
 def capture_camera_data(zed, depth_mode, img_left, img_right, depth_img): 
     zed.retrieve_image(img_left, sl.VIEW.LEFT, sl.MEM.CPU)
     zed.retrieve_image(img_right, sl.VIEW.RIGHT, sl.MEM.CPU)

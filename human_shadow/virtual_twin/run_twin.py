@@ -96,8 +96,9 @@ if __name__ == "__main__":
 
     real_initial_state = {
         "pos": robot_pos,
-        "ori": robot_ori_xyzw,
+        "quat_xyzw": robot_ori_xyzw,
         "qpos": robot_qpos,
+        "gripper_pos": 0.0
     }
 
 

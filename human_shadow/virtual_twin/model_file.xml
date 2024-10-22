@@ -1,4 +1,4 @@
-<mujoco model="panda">
+<mujoco model="panda_real">
     <actuator>
         
         <motor ctrllimited="false" forcelimited="false" joint="robot0_joint1" name="robot0_torq_j1" />
@@ -11,14 +11,14 @@
     <general name="gripper0_fingers_actuator" tendon="gripper0_split" forcerange="-5 5" ctrlrange="0 255" gainprm="0.3137255 0 0" biasprm="0 -100 -10" biastype="affine" />
   </actuator>
     <asset>
-        <mesh name="robot0_link0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link0.stl" />
-        <mesh name="robot0_link1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link1.stl" />
-        <mesh name="robot0_link2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link2.stl" />
-        <mesh name="robot0_link3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link3.stl" />
-        <mesh name="robot0_link4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link4.stl" />
-        <mesh name="robot0_link5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link5.stl" />
-        <mesh name="robot0_link6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link6.stl" />
-        <mesh name="robot0_link7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/meshes/link7.stl" />
+        <mesh name="robot0_link0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link0.stl" />
+        <mesh name="robot0_link1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link1.stl" />
+        <mesh name="robot0_link2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link2.stl" />
+        <mesh name="robot0_link3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link3.stl" />
+        <mesh name="robot0_link4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link4.stl" />
+        <mesh name="robot0_link5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link5.stl" />
+        <mesh name="robot0_link6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link6.stl" />
+        <mesh name="robot0_link7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/meshes/link7.stl" />
 
         
 	<material name="robot0_Face636_001" specular="0.5" shininess="0.45" rgba="0.901961 0.921569 0.929412 1.000000" />
@@ -33,37 +33,37 @@
 	<material name="robot0_Shell009_001" specular="0.5" shininess="0.45" rgba="0.250980 0.250980 0.250980 1.000000" />
 	<material name="robot0_Shell010_001" specular="0.5" shininess="0.45" rgba="0.901961 0.921569 0.929412 1.000000" />
 	<material name="robot0_Shell_001" specular="0.5" shininess="0.45" rgba="0.250980 0.250980 0.250980 1.000000" />
-	<mesh name="robot0_link0_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_0.obj" />
-	<mesh name="robot0_link0_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_1.obj" />
-	<mesh name="robot0_link0_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_2.obj" />
-	<mesh name="robot0_link0_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_3.obj" />
-	<mesh name="robot0_link0_vis_4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_4.obj" />
-	<mesh name="robot0_link0_vis_5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_5.obj" />
-	<mesh name="robot0_link0_vis_6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_6.obj" />
-	<mesh name="robot0_link0_vis_7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_7.obj" />
-	<mesh name="robot0_link0_vis_8" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_8.obj" />
-	<mesh name="robot0_link0_vis_9" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_9.obj" />
-	<mesh name="robot0_link0_vis_10" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_10.obj" />
-	<mesh name="robot0_link0_vis_11" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_11.obj" />
+	<mesh name="robot0_link0_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_0.obj" />
+	<mesh name="robot0_link0_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_1.obj" />
+	<mesh name="robot0_link0_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_2.obj" />
+	<mesh name="robot0_link0_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_3.obj" />
+	<mesh name="robot0_link0_vis_4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_4.obj" />
+	<mesh name="robot0_link0_vis_5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_5.obj" />
+	<mesh name="robot0_link0_vis_6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_6.obj" />
+	<mesh name="robot0_link0_vis_7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_7.obj" />
+	<mesh name="robot0_link0_vis_8" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_8.obj" />
+	<mesh name="robot0_link0_vis_9" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_9.obj" />
+	<mesh name="robot0_link0_vis_10" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_10.obj" />
+	<mesh name="robot0_link0_vis_11" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link0_vis/link0_vis_11.obj" />
 
         
 	<material name="robot0_Part__Feature_001" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
-	<mesh name="robot0_link1_vis" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link1_vis/link1_vis.obj" />
+	<mesh name="robot0_link1_vis" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link1_vis/link1_vis.obj" />
 
 
         
 	<material name="robot0_Part__Feature024" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
-	<mesh name="robot0_link2_vis" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link2_vis/link2_vis.obj" />
+	<mesh name="robot0_link2_vis" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link2_vis/link2_vis.obj" />
 
         
 	<material name="robot0_Part__Feature001_010_001_002" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
 	<material name="robot0_Part__Feature002_007_001_002" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
 	<material name="robot0_Part__Feature003_004_001_002" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
 	<material name="robot0_Part__Feature_001_001_001_002" specular="0.5" shininess="0.45" rgba="0.250980 0.250980 0.250980 1.000000" />
-	<mesh name="robot0_link3_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_0.obj" />
-	<mesh name="robot0_link3_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_1.obj" />
-	<mesh name="robot0_link3_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_2.obj" />
-	<mesh name="robot0_link3_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_3.obj" />
+	<mesh name="robot0_link3_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link3_vis/link3_vis_0.obj" />
+	<mesh name="robot0_link3_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link3_vis/link3_vis_1.obj" />
+	<mesh name="robot0_link3_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link3_vis/link3_vis_2.obj" />
+	<mesh name="robot0_link3_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link3_vis/link3_vis_3.obj" />
 
 
         
@@ -71,18 +71,18 @@
 	<material name="robot0_Part__Feature002_001_003_001" specular="0.5" shininess="0.45" rgba="0.250980 0.250980 0.250980 1.000000" />
 	<material name="robot0_Part__Feature003_001_003_001" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
 	<material name="robot0_Part__Feature_002_003_001" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
-	<mesh name="robot0_link4_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_0.obj" />
-	<mesh name="robot0_link4_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_1.obj" />
-	<mesh name="robot0_link4_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_2.obj" />
-	<mesh name="robot0_link4_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_3.obj" />
+	<mesh name="robot0_link4_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link4_vis/link4_vis_0.obj" />
+	<mesh name="robot0_link4_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link4_vis/link4_vis_1.obj" />
+	<mesh name="robot0_link4_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link4_vis/link4_vis_2.obj" />
+	<mesh name="robot0_link4_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link4_vis/link4_vis_3.obj" />
 
         
 	<material name="robot0_Part__Feature_002_004_003" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
 	<material name="robot0_Shell001_001_001_003" specular="0.5" shininess="0.45" rgba="0.250000 0.250000 0.250000 1.000000" />
 	<material name="robot0_Shell_001_001_003" specular="0.5" shininess="0.45" rgba="1.000000 1.000000 1.000000 1.000000" />
-	<mesh name="robot0_link5_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_0.obj" />
-	<mesh name="robot0_link5_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_1.obj" />
-	<mesh name="robot0_link5_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_2.obj" />
+	<mesh name="robot0_link5_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link5_vis/link5_vis_0.obj" />
+	<mesh name="robot0_link5_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link5_vis/link5_vis_1.obj" />
+	<mesh name="robot0_link5_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link5_vis/link5_vis_2.obj" />
 
         
 	<material name="robot0_Face064_002_001_002_001" specular="0.5" shininess="0.45" rgba="1.000000 0.000000 0.000000 1.000000" />
@@ -102,23 +102,23 @@
 	<material name="robot0_Shell_003_001_002_001" specular="0.5" shininess="0.45" rgba="0.250980 0.250980 0.250980 1.000000" />
 	<material name="robot0_Union001_001_001_002_001" specular="0.5" shininess="0.45" rgba="0.039216 0.541176 0.780392 1.000000" />
 	<material name="robot0_Union_001_001_002_001" specular="0.5" shininess="0.45" rgba="0.039216 0.541176 0.780392 1.000000" />	
-	<mesh name="robot0_link6_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_0.obj" />
-	<mesh name="robot0_link6_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_1.obj" />
-	<mesh name="robot0_link6_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_2.obj" />
-	<mesh name="robot0_link6_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_3.obj" />
-	<mesh name="robot0_link6_vis_4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_4.obj" />
-	<mesh name="robot0_link6_vis_5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_5.obj" />
-	<mesh name="robot0_link6_vis_6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_6.obj" />
-	<mesh name="robot0_link6_vis_7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_7.obj" />
-	<mesh name="robot0_link6_vis_8" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_8.obj" />
-	<mesh name="robot0_link6_vis_9" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_9.obj" />
-	<mesh name="robot0_link6_vis_10" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_10.obj" />
-	<mesh name="robot0_link6_vis_11" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_11.obj" />
-	<mesh name="robot0_link6_vis_12" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_12.obj" />
-	<mesh name="robot0_link6_vis_13" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_13.obj" />
-	<mesh name="robot0_link6_vis_14" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_14.obj" />
-	<mesh name="robot0_link6_vis_15" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_15.obj" />
-	<mesh name="robot0_link6_vis_16" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_16.obj" />
+	<mesh name="robot0_link6_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_0.obj" />
+	<mesh name="robot0_link6_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_1.obj" />
+	<mesh name="robot0_link6_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_2.obj" />
+	<mesh name="robot0_link6_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_3.obj" />
+	<mesh name="robot0_link6_vis_4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_4.obj" />
+	<mesh name="robot0_link6_vis_5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_5.obj" />
+	<mesh name="robot0_link6_vis_6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_6.obj" />
+	<mesh name="robot0_link6_vis_7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_7.obj" />
+	<mesh name="robot0_link6_vis_8" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_8.obj" />
+	<mesh name="robot0_link6_vis_9" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_9.obj" />
+	<mesh name="robot0_link6_vis_10" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_10.obj" />
+	<mesh name="robot0_link6_vis_11" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_11.obj" />
+	<mesh name="robot0_link6_vis_12" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_12.obj" />
+	<mesh name="robot0_link6_vis_13" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_13.obj" />
+	<mesh name="robot0_link6_vis_14" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_14.obj" />
+	<mesh name="robot0_link6_vis_15" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_15.obj" />
+	<mesh name="robot0_link6_vis_16" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link6_vis/link6_vis_16.obj" />
 
         
 	<material name="robot0_Part__Mirroring001_004_002" specular="0.5" shininess="0.45" rgba="0.250980 0.250980 0.250980 1.000000" />
@@ -130,14 +130,14 @@
 	<material name="robot0_Part__Mirroring007_004_001" specular="0.5" shininess="0.45" rgba="0.250980 0.250980 0.250980 1.000000" />
 	<material name="robot0_Part__Mirroring_004_001" specular="0.5" shininess="0.45" rgba="0.898039 0.917647 0.929412 1.000000" />	
 
-	<mesh name="robot0_link7_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_0.obj" />
-	<mesh name="robot0_link7_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_1.obj" />
-	<mesh name="robot0_link7_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_2.obj" />
-	<mesh name="robot0_link7_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_3.obj" />
-	<mesh name="robot0_link7_vis_4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_4.obj" />
-	<mesh name="robot0_link7_vis_5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_5.obj" />
-	<mesh name="robot0_link7_vis_6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_6.obj" />
-	<mesh name="robot0_link7_vis_7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_7.obj" />
+	<mesh name="robot0_link7_vis_0" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_0.obj" />
+	<mesh name="robot0_link7_vis_1" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_1.obj" />
+	<mesh name="robot0_link7_vis_2" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_2.obj" />
+	<mesh name="robot0_link7_vis_3" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_3.obj" />
+	<mesh name="robot0_link7_vis_4" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_4.obj" />
+	<mesh name="robot0_link7_vis_5" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_5.obj" />
+	<mesh name="robot0_link7_vis_6" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_6.obj" />
+	<mesh name="robot0_link7_vis_7" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/robots/panda_real/obj_meshes/link7_vis/link7_vis_7.obj" />
 
     <mesh name="mount0_pedestal" file="/juno/u/lepertm/shadow/robosuite/robosuite/models/assets/mounts/meshes/rethink_mount/pedestal.stl" />
     <material name="gripper0_metal" rgba="0.58 0.58 0.58 1" />
@@ -248,7 +248,10 @@
 					    <geom mesh="robot0_link7_vis_7" material="robot0_Part__Mirroring_004_001" type="mesh" contype="0" conaffinity="0" group="1" name="robot0_g49_vis" />
                                             
                                             <geom type="mesh" group="0" mesh="robot0_link7" name="robot0_link7_collision" rgba="0 0.5 0 1" />
-                                            <body name="robot0_right_hand" pos="0 0 0.1065" quat="0.924 0 0 -0.383">
+                                            <body name="robot0_right_hand" pos="0 0 0.1034" quat="0.924 0 0 -0.383">
+											    
+											    
+
                                                 <inertial pos="0 0 0" mass="0.5" diaginertia="0.05 0.05 0.05" />
                                                 
                                                 <camera mode="fixed" name="robot0_eye_in_hand" pos="0.05 0 0" quat="0 0.707108 0.707108 0" fovy="75" />
