@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Tuple
 from scipy.spatial.transform import Rotation
 
+from robosuite.wrappers import VisualizationWrapper
 from human_shadow.utils.file_utils import get_parent_folder_of_package
 from human_shadow.camera.zed_utils import ZED_RESOLUTIONS, ZEDResolution
 from robosuite.utils.transform_utils import quat2axisangle, quat2mat, mat2quat
@@ -82,7 +83,7 @@ class TwinRobot:
         self.mode = mode
         self.render = render
         self.n_steps_long = 100
-        self.n_steps_short=20
+        self.n_steps_short=5
         self.num_frames = 2
         self.T_conversion = None
         self.camera_res = 1080
@@ -117,44 +118,65 @@ class TwinRobot:
         options["camera_principalpixel"] = self.camera_params.principalpixel
         options["camera_focalpixel"] = self.camera_params.focalpixel
 
-
         control_freq = 20
 
         print("Before env")
+        thumb_site_config={"type": "sphere", 
+                            "size": [0.01],
+                            "rgba": [0, 1, 0, 1],
+                            "name": "thumb",}
+        index_site_config={"type": "sphere", 
+                            "size": [0.01],
+                            "rgba": [1, 0, 0, 1],
+                            "name": "index",}
+        hand_ee_site_config={"type": "sphere", 
+                            "size": [0.01],
+                            "rgba": [0, 0, 1, 1],
+                            "name": "hand_ee",}
 
         self.env = EnvRobosuite(
             **options,
-            has_renderer=render,
-            has_offscreen_renderer=True,
-            ignore_done=True,
-            use_camera_obs=True,
+            render=render,
+            render_offscreen=True,
+            # has_renderer=render,
+            # has_offscreen_renderer=True,
+            # ignore_done=True,
+            # use_camera_obs=True,
             use_image_obs=True,
             camera_names=self.camera_params.name,
             control_freq=control_freq,
+            visualize_sites=False,
+            indicator_configs=[thumb_site_config, index_site_config, hand_ee_site_config],
         )
 
+        # visualize_sites = True
+        # if visualize_sites:
+        #     print(type(self.env))
+        #     self.env = VisualizationWrapper(self.env, indicator_configs=site_config)
+        #     print("After visualization wrapper: ", type(self.env))
+
         self.env.reset()
+        if render:
+            self.env.render()
         self.initial_state = self.env.get_state()["states"]
 
-        # Initialize the twin sim to the pose of the current pose of the real robot
-        real_ee_pos = real_initial_state["pos"]
-        real_ee_quat_xyzw = real_initial_state["quat_xyzw"]
-        real_qpos = real_initial_state["qpos"]
-        real_gripper_pos = real_initial_state["gripper_pos"]
+        # # Initialize the twin sim to the pose of the current pose of the real robot
+        # real_ee_pos = real_initial_state["pos"]
+        # real_ee_quat_xyzw = real_initial_state["quat_xyzw"]
+        # real_qpos = real_initial_state["qpos"]
+        # real_gripper_pos = real_initial_state["gripper_pos"]
 
-        print("Initializing twin robot")
+        # print("Initializing twin robot")
 
-        # if self.mode == "qpos":
-        #     self.reset_to_qpos(real_qpos, real_gripper_pos)
-        # else:
-        #     self.move_to_pose(real_ee_pos, real_ee_quat_xyzw, real_gripper_pos, self.n_steps_long)
+        # # if self.mode == "qpos":
+        # #     self.reset_to_qpos(real_qpos, real_gripper_pos)
+        # # else:
+        # #     self.move_to_pose(real_ee_pos, real_ee_quat_xyzw, real_gripper_pos, self.n_steps_long)
 
-        print("Done moving")
+        # print("Done moving")
 
-        self.initial_state = self.env.get_state()["states"]
-        self.obs_history = self._get_initial_obs_history(real_initial_state)
-
-
+        # self.initial_state = self.env.get_state()["states"]
+        # self.obs_history = self._get_initial_obs_history(real_initial_state)
 
 
     def _get_initial_obs_history(self, state):
@@ -215,11 +237,11 @@ class TwinRobot:
 
 
     def move_to_pose(self, ee_pos, ee_ori, gripper_action, n_steps):
-        print("EE pos: ", ee_pos, "EE ori: ", ee_ori)
         action = get_action_from_ee_pose_panda(ee_pos, ee_ori, gripper_action, self.gripper_name, use_base_offset=True)
-        print("Action: ", action)
         for _ in tqdm(range(n_steps)):
             obs, _, _, _ = self.env.step(action)
+            if self.render:
+                self.env.render(camera_name="sideview")
         return obs
 
 
