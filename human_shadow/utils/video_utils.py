@@ -6,6 +6,7 @@ import mediapy as media
 
 
 def convert_video_to_images(video_path: str, save_folder: str):
+    """Save each frame of video as an image in save_folder."""
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
 

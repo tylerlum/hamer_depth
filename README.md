@@ -1,6 +1,6 @@
 # Human Shadow
 
-### Installation
+## Installation
 Install the repo in your env by running this command in the top level human_shadow directory.
 ```
 pip install -e .
@@ -9,31 +9,28 @@ pip install -e .
 In order to visualize point clouds, you may need to set init_renderer: bool = False in HaMeR's hamer/model/hamer.py file to ensure that HaMeR's visualizer doesn't cause errors with our open3d visualizer. 
 
 
-### 3D Hand pose estimation
-```
-python hand_pose.py
-```
-This file contains 4 methods on how to obtain 3D estimates of keypoints on the hand. 
 
-### 3D Hand pose estimation live
+## Video processing
+1. Process every video to extract hand segmentation masks and poses:
+To process every video in /juno/group/shared/raw_data/data_jiaying_1
 ```
-python hand_pose_live.py
+python process_human_data.py --demo_name data_jiaying_1 --use_shared
 ```
-This file will run hand pose estimation for live images. Please update the image, depth and intrinsics in it. 
 
+To process every video in human_shadow/human_shadow/data/videos/data_jiaying_1
+```
+python process_human_data.py --demo_name data_jiaying_1
+```
 
-### 3D Hand pose estimation video processing
+2. Extract the segmentation masks of the robot
 ```
-python video_preprocessing.py
+python generate_robot_seg_overlay.py --demo_name data_jiaying_1 --use_shared
 ```
-2. Run hand_pose_verify.py to get all the prediction results and visualization images.
+or
 ```
-python hand_pose_verify.py
+python generate_robot_seg_overlay.py --demo_name data_jiaying_1 
 ```
-3. Get full visualization video.
-```
-python generate_full_visualization.py
-```
+
 
 ## Data collection 
 ### View ZED camera images live
@@ -143,7 +140,3 @@ python collect_calibration_data.py --name test --sim --resolution HD2K
  cd human_shadow/camera
 python collect_calibration_data.py --name test --resolution HD2K
 ```
-
-### TODO
- - Move data paths to shared folder in /juno/group/human_shadow
- - Add full typing with mypy

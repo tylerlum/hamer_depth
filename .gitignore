@@ -29,6 +29,7 @@ __pycache__/*
 
 *.pkl
 *.mp4
+*.avi
 *.gif
 *.jpg
 *.npy

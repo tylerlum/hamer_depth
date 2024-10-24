@@ -14,7 +14,7 @@ class Button:
     def reset(self):
         pygame.event.get()
 
-    def is_pressed(self, up=False):
+    def is_pressed(self, up: bool=False) -> bool:
         for event in pygame.event.get():
             if up:
                 if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
@@ -24,7 +24,7 @@ class Button:
                     return True
         return False
 
-    def wait_for_press(self):
+    def wait_for_press(self) -> bool:
         button_pressed = False
         while not button_pressed:
             button_pressed = self.is_pressed(up=True)

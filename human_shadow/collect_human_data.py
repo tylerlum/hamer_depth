@@ -18,8 +18,12 @@ from human_shadow.utils.image_utils import *
 
 
 def create_output_folder(args):
-    project_folder = get_parent_folder_of_package("human_shadow")
-    save_folder = os.path.join(project_folder, "human_shadow/data", "videos", args.folder)
+    if args.save_to_shared:
+        project_folder = "/juno/group/human_shadow/raw_data/"
+    else:
+        project_folder = os.path.join(get_parent_folder_of_package("human_shadow"), "human_shadow/data/videos")
+    
+    save_folder = os.path.join(project_folder, args.folder)
     os.makedirs(save_folder, exist_ok=True)
     n_folders = len([f for f in os.listdir(save_folder) if os.path.isdir(os.path.join(save_folder, f))])
     save_folder = os.path.join(save_folder, f"{n_folders}")
@@ -56,9 +60,9 @@ def record_one_video(zed, camera_params, args, button):
         if zed.grab() == sl.ERROR_CODE.SUCCESS:
             img_left_rgb, img_right_rgb, depth_img_arr = capture_camera_data(zed, args.depth_mode, img_left, 
             img_right, depth_img)
-            # img_left_rgb = resize_img_to_square(img_left_rgb)
-            # img_right_rgb = resize_img_rgb = resize_img_to_square(img_right_rgb)
-            # depth_img_arr = resize_img_to_square(depth_img_arr)
+            img_left_rgb = resize_img_to_square(img_left_rgb)
+            img_right_rgb = resize_img_rgb = resize_img_to_square(img_right_rgb)
+            depth_img_arr = resize_img_to_square(depth_img_arr)
 
             left_imgs.append(img_left_rgb.copy())
             right_imgs.append(img_right_rgb.copy())
@@ -129,6 +133,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--save_to_shared", action="store_true")
     parser.add_argument("--folder", type=str, default="test")
     parser.add_argument("--hz", type=int, default=10, required=True)
     parser.add_argument("--verbose", action="store_true")

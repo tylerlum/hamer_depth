@@ -40,6 +40,10 @@ class DetectionResult:
         )
 
 def resize_image_to_rectangle(img, target_height, target_width):
+    """
+    Resize an image to a rectangle shape with the target height and width.
+    Set the image in the center of the rectangle and leave the rest as black.
+    """
     assert(img.shape[0] == target_height)
     if img.shape[0] == img.shape[1]:
         new_img = np.zeros((target_height, target_width, 3), dtype=np.uint8)
@@ -50,7 +54,8 @@ def resize_image_to_rectangle(img, target_height, target_width):
 
 
 
-def resize_img_to_square(img):
+def resize_img_to_square(img: np.ndarray) -> np.ndarray:
+    """Resize an image to a square shape using the smallest dim as square length."""
     img_w = img.shape[1]
     img_h = img.shape[0]
     min_dim = min(img_w, img_h)

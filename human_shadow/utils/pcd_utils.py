@@ -1,12 +1,14 @@
 import pdb
 import numpy as np
+from typing import Tuple, List, Optional
 
 import open3d as o3d
 import trimesh 
 from pycpd import RigidRegistration
 from sklearn.neighbors import NearestNeighbors
 
-def cpd_registration(source_points, target_points):
+def cpd_registration(source_points: o3d.geometry.PointCloud, 
+                     target_points: o3d.geometry.PointCloud) -> o3d.geometry.PointCloud:
     """
     Register two point clouds using Coherent Point Drift (CPD) algorithm.
     """
@@ -15,7 +17,8 @@ def cpd_registration(source_points, target_points):
     return transformed_points
 
 
-def preprocess_point_cloud(pcd, voxel_size):
+def preprocess_point_cloud(pcd: o3d.geometry.PointCloud, 
+                           voxel_size: float) -> Tuple[o3d.geometry.PointCloud, o3d.pipelines.registration.Feature]:
     """
     Downsample point cloud to desired voxel resolution and compute FPFH features.
     """
@@ -28,7 +31,8 @@ def preprocess_point_cloud(pcd, voxel_size):
     return pcd_down, pcd_fpfh
 
 
-def global_registration(source_pcd, target_pcd, voxel_size):
+def global_registration(source_pcd: o3d.geometry.PointCloud, target_pcd: o3d.geometry.PointCloud, 
+                        voxel_size: float) -> o3d.pipelines.registration.RegistrationResult:
     """
     Register two point clouds using global registration with RANSAC.
     """
@@ -48,7 +52,9 @@ def global_registration(source_pcd, target_pcd, voxel_size):
     return result_ransac
 
 
-def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registration=True, init_transform=None):
+def icp_registration(source_pcd: o3d.geometry.PointCloud, target_pcd: o3d.geometry.PointCloud, 
+                     voxel_size: float=0.05, use_global_registration:bool=True, 
+                     init_transform:Optional[np.ndarray]=None) -> Tuple[o3d.geometry.PointCloud, np.ndarray]:
     """
     Register two point clouds using ICP algorithm. 
     """
@@ -68,11 +74,7 @@ def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registr
         estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint())
     
     if np.array_equal(init_transform, result_icp.transformation):
-        print('Use global registration')
-        try:
-            result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
-        except:
-            return source_pcd, None
+        result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
         init_transform = result_ransac.transformation
         result_icp = o3d.pipelines.registration.registration_icp(
             source=source_pcd, target=target_pcd, max_correspondence_distance=max_correspondence_distance, 
@@ -84,7 +86,7 @@ def icp_registration(source_pcd, target_pcd, voxel_size=0.05, use_global_registr
     return aligned_source_pcd, result_icp.transformation
 
 
-def get_visible_points(mesh, origin):
+def get_visible_points(mesh, origin: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Return list of points in mesh that are visible from origin.
     """
@@ -99,7 +101,7 @@ def get_visible_points(mesh, origin):
     return np.array(visible_points).astype(np.float32), np.array(visible_vertex_indices)
 
 
-def get_pcd_from_points(points, colors=None):
+def get_pcd_from_points(points: np.ndarray, colors: Optional[np.ndarray]=None) -> o3d.geometry.PointCloud:
     """
     Convert a list of points to an Open3D point cloud.
     """
@@ -111,7 +113,7 @@ def get_pcd_from_points(points, colors=None):
     return pcd
 
 
-def visualize_pcds(list_pcds, visible=True):
+def visualize_pcds(list_pcds: list, visible: bool=True) -> np.ndarray:
     """
     Visualize a list of point clouds.
     """
@@ -130,11 +132,14 @@ def visualize_pcds(list_pcds, visible=True):
     if visible:
         vis.run()
     vis.destroy_window()
+    if visualization_image is None:
+        visualization_image = np.array([])
     return visualization_image
 
 
 
-def radius_outlier_detection(points, radius=5, min_neighbors=5):
+def radius_outlier_detection(points: np.ndarray, radius: float=5, 
+                             min_neighbors: int=5) -> Tuple[np.ndarray, np.ndarray]:
     """
     Detect outliers in a point cloud using radius-based outlier detection.
     """
@@ -152,7 +157,8 @@ def radius_outlier_detection(points, radius=5, min_neighbors=5):
     return outliers_mask, outlier_pts
 
 
-def remove_outliers(pcd, radius=5, min_neighbors=5):
+def remove_outliers(pcd: o3d.geometry.PointCloud, radius: float=5, 
+                    min_neighbors: int=5) -> Tuple[o3d.geometry.PointCloud, np.ndarray]:
     """
     Remove outliers from a point cloud using radius-based outlier detection.
     """
@@ -166,7 +172,7 @@ def remove_outliers(pcd, radius=5, min_neighbors=5):
     return filtered_pcd, outlier_indices
 
 
-def get_3D_point_from_pixel(px, py, depth, intrinsics):
+def get_3D_point_from_pixel(px: int, py: int, depth: float, intrinsics: dict) -> np.ndarray:
     """
     Convert pixel coordinates and depth to 3D point.
     """
@@ -183,7 +189,7 @@ def get_3D_point_from_pixel(px, py, depth, intrinsics):
     return p
 
 
-def get_3D_points_from_pixels(pixels_2d, depth_map, intrinsics):
+def get_3D_points_from_pixels(pixels_2d: np.ndarray, depth_map: np.ndarray, intrinsics: dict) -> np.ndarray:
     """
     Convert an array of pixel coordinates and depth map to 3D points.
     """
@@ -202,7 +208,8 @@ def get_3D_points_from_pixels(pixels_2d, depth_map, intrinsics):
     return points_3d
 
 
-def get_point_cloud_of_segmask(mask, depth_img, img, intrinsics, visualize=False):
+def get_point_cloud_of_segmask(mask: np.ndarray, depth_img: np.ndarray, img: np.ndarray, 
+                               intrinsics: dict, visualize: bool=False) -> o3d.geometry.PointCloud:
     """
     Return the point cloud that corresponds to the segmentation mask in the depth image.
     """
