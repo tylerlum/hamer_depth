@@ -130,6 +130,10 @@ def main(args):
         human_masks = np.array(media.read_video(human_masks_path, output_format="gray"))
         human_masks[human_masks > 0] = 1
 
+        # Load human images
+        video_idx = int(human_data_subfolder)
+        human_imgs_path = os.path.join(human_data_folder, f"video_{video_idx}_L.mp4")
+        human_imgs = np.array(media.read_video(human_imgs_path))
 
         # Initialize virtual twin robot in mujoco
         start_idx = get_start_idx(thumb_poses, index_poses, hand_ee_poses)
@@ -138,6 +142,7 @@ def main(args):
         # Generate masked images
         list_masked_imgs = []
         list_robot_masks = []
+        list_rgb_masked_imgs = []
         for idx in tqdm(range(len(thumb_poses))):
             if idx < start_idx:
                 list_masked_imgs.append(human_masks[idx])
@@ -157,8 +162,12 @@ def main(args):
             masked_img_robot = np.ones_like(robot_mask) * 255
             masked_img_robot[(robot_mask == 1) | (gripper_mask == 1)] = 0
 
+            masked_human_imgs = human_imgs[idx].copy()
+            masked_human_imgs[(robot_mask == 1) | (gripper_mask == 1) | (human_mask == 1)] = 0
+
             list_masked_imgs.append(np.squeeze(masked_img))
             list_robot_masks.append(np.squeeze(masked_img_robot))
+            list_rgb_masked_imgs.append(masked_human_imgs)
 
 
         # Save masked images to video
@@ -168,6 +177,9 @@ def main(args):
         robot_masks_path = os.path.join(human_data_folder, f"imgs_robot_masks.mkv")
         media.write_video(robot_masks_path, list_robot_masks, fps=30, codec="ffv1", input_format="gray")
         print(f"Saved masked images to {masks_path}")
+
+        rgb_masks_path = os.path.join(human_data_folder, f"imgs_rgb_masks_overlay.mkv")
+        media.write_video(rgb_masks_path, list_rgb_masked_imgs, fps=30, codec="ffv1")
 
 
 if __name__ == "__main__":

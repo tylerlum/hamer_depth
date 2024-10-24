@@ -159,7 +159,6 @@ def main(args):
     # Get all folders in videos_folder
     all_video_folders = [f for f in os.listdir(videos_folder) if os.path.isdir(os.path.join(videos_folder, f))]
     all_video_folders = sorted(all_video_folders, key=lambda x: int(x))
-    # all_video_folders = all_video_folders[27:]
 
     for video_sub_folder in tqdm(all_video_folders):
         video_folder = os.path.join(videos_folder, video_sub_folder)
