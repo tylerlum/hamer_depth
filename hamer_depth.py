@@ -32,7 +32,11 @@ def get_initial_transformation_estimate(visible_points_3d: np.ndarray,
     """
     Get estimate of transformation from HaMeR's predicted 3d point cloud of the hand (using only the visible points) to the point cloud of the arm obtained from the depth image. Assume orientation is the same (only translation is different)
     """
-    translation = np.nanmedian(visible_points_3d[(visible_points_3d[:, 2] > 0)] - visible_hamer_vertices[(visible_points_3d[:, 2] > 0)], axis=0)
+    hand_center = np.mean(visible_hamer_vertices, axis=0)
+    distances = np.linalg.norm(visible_points_3d - hand_center[None], axis=1)
+    valid_idxs = visible_points_3d[:, 2] > 0
+    close_idxs = distances < 0.2
+    translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
     T_0 = np.eye(4)
     if not np.isnan(translation).any():
         T_0[:3, 3] = translation
