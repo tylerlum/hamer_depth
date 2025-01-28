@@ -39,5 +39,6 @@ __pycache__/*
 **/virtual_twin/*
 **/scratchwork/*
 outputs_depth*/*
+hamer/*
 
 **/camera_calibration_data/*
