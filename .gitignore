@@ -35,5 +35,8 @@ __pycache__/*
 *.npy
 *.egg-info
 
+*.obj
+**/virtual_twin/**
+**/scratchwork/**
 
 **/camera_calibration_data/*
