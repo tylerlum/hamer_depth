@@ -36,7 +36,7 @@ __pycache__/*
 *.egg-info
 
 *.obj
-**/virtual_twin/**
-**/scratchwork/**
+**/virtual_twin/*
+**/scratchwork/*
 
 **/camera_calibration_data/*
