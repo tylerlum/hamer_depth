@@ -178,6 +178,8 @@ def get_3D_point_from_pixel(px: int, py: int, depth: float, intrinsics: dict) ->
     """
     x = (px - intrinsics["cx"]) / intrinsics["fx"]
     y = (py - intrinsics["cy"]) / intrinsics["fy"]
+    
+    depth = depth / 1000
 
     X = x * depth
     Y = y * depth
@@ -199,7 +201,7 @@ def get_3D_points_from_pixels(pixels_2d: np.ndarray, depth_map: np.ndarray, intr
     x = (px - intrinsics["cx"]) / intrinsics["fx"]
     y = (py - intrinsics["cy"]) / intrinsics["fy"]
 
-    depth = depth_map[py, px]
+    depth = depth_map[py, px] / 1000
 
     X = x * depth
     Y = y * depth
@@ -213,7 +215,7 @@ def get_point_cloud_of_segmask(mask: np.ndarray, depth_img: np.ndarray, img: np.
     """
     Return the point cloud that corresponds to the segmentation mask in the depth image.
     """
-    idxs_y, idxs_x = mask.nonzero()
+    idxs_y, idxs_x, _ = mask.nonzero()
     depth_masked = depth_img[idxs_y, idxs_x]
     seg_points = get_3D_point_from_pixel(idxs_x, idxs_y, depth_masked, intrinsics)
     seg_colors = img[idxs_y, idxs_x, :] / 255.0  # Normalize to [0,1] for cv2

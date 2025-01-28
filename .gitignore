@@ -38,5 +38,6 @@ __pycache__/*
 *.obj
 **/virtual_twin/*
 **/scratchwork/*
+outputs_depth*/*
 
 **/camera_calibration_data/*

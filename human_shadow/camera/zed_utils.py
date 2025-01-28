@@ -1,10 +1,10 @@
-import pyzed.sl as sl
+# import pyzed.sl as sl
 import numpy as np
 import json
 import enum
 
 class ZEDResolution(enum.Enum):
-  SD = (480, 640)
+  SD = (360, 640)
   HD720 = (720, 1280)
   HD1080 = (1080, 1920)
   HD2K = (1242, 2208)
@@ -17,7 +17,7 @@ ZED_RESOLUTIONS = {
     }
 
 ZED_RESOLUTIONS_SQUARE_SIZE = {
-    480: ZEDResolution.SD,
+    360: ZEDResolution.SD,
     720: ZEDResolution.HD720,
     1080: ZEDResolution.HD1080,
     1242: ZEDResolution.HD2K,
@@ -97,15 +97,18 @@ def convert_intrinsics_matrix_to_dict(camera_matrix):
     return intrinsics
 
 def get_intrinsics_from_json(json_path: str):
-    with open(json_path, "r") as f:
-        camera_intrinsics = json.load(f)
+    # with open(json_path, "r") as f:
+    #     camera_intrinsics = json.load(f)
 
-    # Get camera matrix 
-    fx = camera_intrinsics["left"]["fx"]
-    fy = camera_intrinsics["left"]["fy"]
-    cx = camera_intrinsics["left"]["cx"]
-    cy = camera_intrinsics["left"]["cy"]
-    camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+    # # Get camera matrix 
+    # fx = camera_intrinsics["left"]["fx"]
+    # fy = camera_intrinsics["left"]["fy"]
+    # cx = camera_intrinsics["left"]["cx"]
+    # cy = camera_intrinsics["left"]["cy"]
+    # camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+
+    with open(json_path, "r") as f:
+        camera_matrix = np.loadtxt(f)
 
     return camera_matrix
 
