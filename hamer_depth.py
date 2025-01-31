@@ -13,6 +13,53 @@ from human_shadow.utils.transform_utils import *
 from human_shadow.utils.video_utils import *
 from human_shadow.camera.zed_utils import *
 
+import numpy as np
+from scipy.spatial import cKDTree
+import networkx as nx
+
+def find_connected_clusters(points, distance_threshold=0.05):
+    """
+    Find clusters of points that are connected within a distance threshold
+    and return the largest cluster.
+    
+    Args:
+        points: numpy array of shape (N, 3) containing 3D points
+        distance_threshold: float, maximum distance for points to be considered connected
+        
+    Returns:
+        largest_cluster_points: numpy array of points in the largest cluster
+        largest_cluster_indices: indices of points in the largest cluster
+    """
+    # Build KD-tree for efficient nearest neighbor search
+    tree = cKDTree(points)
+    
+    # Find all pairs of points within distance_threshold
+    pairs = tree.query_pairs(distance_threshold, output_type='ndarray')
+    
+    # Create graph
+    G = nx.Graph()
+    G.add_nodes_from(range(len(points)))
+    G.add_edges_from(pairs)
+    
+    # Find connected components (clusters)
+    clusters = list(nx.connected_components(G))
+    
+    # Get sizes of all clusters
+    cluster_sizes = [len(c) for c in clusters]
+    
+    if not clusters:
+        return np.array([]), np.array([])
+    
+    # Find the largest cluster
+    largest_cluster = list(clusters[np.argmax(cluster_sizes)])
+    largest_cluster_indices = np.array(largest_cluster)
+    largest_cluster_points = points[largest_cluster_indices]
+    
+    return largest_cluster_points, largest_cluster_indices
+
+
+
+
 def get_visible_pts_from_hamer(detector_hamer: DetectorHamer, hamer_out: dict, mesh: trimesh.Trimesh,
                                img_depth: np.ndarray, cam_intrinsics: dict) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -35,8 +82,17 @@ def get_initial_transformation_estimate(visible_points_3d: np.ndarray,
     hand_center = np.mean(visible_hamer_vertices, axis=0)
     distances = np.linalg.norm(visible_points_3d - hand_center[None], axis=1)
     valid_idxs = visible_points_3d[:, 2] > 0
-    close_idxs = distances < 0.2
-    translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
+    
+    # OLD
+    # close_idxs = distances < 0.5 # 0.2 # Screening out points more than 15cm away to not affect initial transform estimate
+    # translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
+
+    # NEW
+    valid_visible_points_3d = visible_points_3d[valid_idxs]
+    valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs]
+    largest_cluster_points, largest_cluster_indices = find_connected_clusters(valid_visible_points_3d, distance_threshold=0.05)
+    translation = np.nanmedian(valid_visible_points_3d[largest_cluster_indices] - valid_visible_hamer_vertices[largest_cluster_indices], axis=0)
+
     T_0 = np.eye(4)
     if not np.isnan(translation).any():
         T_0[:3, 3] = translation
@@ -45,21 +101,46 @@ def get_initial_transformation_estimate(visible_points_3d: np.ndarray,
 
 def get_transformation_estimate(visible_points_3d: np.ndarray, 
                                 visible_hamer_vertices: np.ndarray, 
-                                pcd: o3d.geometry.PointCloud) -> Tuple[np.ndarray, o3d.geometry.PointCloud]:
+                                pcd: o3d.geometry.PointCloud, full_pcd) -> Tuple[np.ndarray, o3d.geometry.PointCloud]:
     """
     Align the hamer point cloud (with only visible points) with the full arm point cloud using initial translation prediction
     """
     T_0 = get_initial_transformation_estimate(visible_points_3d, visible_hamer_vertices)
     visible_hamer_pcd = get_pcd_from_points(visible_hamer_vertices, colors=np.ones_like(visible_hamer_vertices) * [0, 1, 0])
+    import copy
+    visible_hamer_pcd_copy = copy.deepcopy(visible_hamer_pcd)
 
-    # visualize_pcds([visible_hamer_pcd, pcd, get_pcd_from_points(visible_points_3d, colors=np.ones_like(visible_points_3d) * [1, 0, 0])])
+
+    # hand_center = np.mean(visible_hamer_vertices, axis=0)
+    # distances = np.linalg.norm(visible_points_3d - hand_center[None], axis=1)
+    # valid_idxs = visible_points_3d[:, 2] > 0
+    # # OLD
+    # # close_idxs = distances < 0.5 # 0.2 # Screening out points more than 15cm away to not affect initial transform estimate
+    # # translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
+
+    # # NEW
+    # valid_visible_points_3d = visible_points_3d[valid_idxs]
+    # valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs]
+    # largest_cluster_points, largest_cluster_indices = find_connected_clusters(valid_visible_points_3d, distance_threshold=0.05)
+    # translation = np.nanmedian(valid_visible_points_3d[largest_cluster_indices] - valid_visible_hamer_vertices[largest_cluster_indices], axis=0)
+
+    # visualize_pcds([visible_hamer_pcd, pcd, full_pcd, get_pcd_from_points(valid_visible_points_3d[largest_cluster_indices], colors=np.ones_like(valid_visible_points_3d[largest_cluster_indices]) * [1, 0, 0])])
+    # breakpoint()
     try: 
         aligned_hamer_pcd, T = icp_registration(visible_hamer_pcd, pcd, voxel_size=0.005, init_transform=T_0)
+        from scipy.spatial.transform import Rotation as R
+        T_copy = T.copy()
+        if (np.absolute(R.from_matrix(T_copy[:3, :3]).as_euler('xyz', degrees=True)) > 90).any(): # Checking ICP output is not flipped
+            print(T)
+            print("HAND FLIPPED OR IS TOO FAR AWAY - USING HAMER")
+            T = T_0
+            aligned_hamer_pcd = visible_hamer_pcd_copy.transform(T)
     except:
         print("ICP FAILED - ENTERING EXCEPTION")
         # np.eye(4)?
         return T_0, None, visible_hamer_pcd
-    # visualize_pcds([aligned_hamer_pcd, pcd])
+    # visualize_pcds([aligned_hamer_pcd, pcd, full_pcd])
+    # breakpoint()
     return T, aligned_hamer_pcd, visible_hamer_pcd
 
 
@@ -114,7 +195,7 @@ def process_image_with_hamer(img_rgb: np.ndarray, img_depth: np.ndarray, mask: n
     mesh = trimesh.Trimesh(hamer_out["verts"].copy(), detector_hamer.faces_right.copy())
     visible_points_3d, visible_hamer_vertices = get_visible_pts_from_hamer(detector_hamer, hamer_out, mesh, img_depth, cam_intrinsics)
     # visualize_pcds([pcd, full_pcd, get_pcd_from_points(visible_hamer_vertices, colors=np.ones_like(visible_hamer_vertices) * [0, 1, 0])])
-    T, aligned_hamer_pcd, visible_hamer_pcd = get_transformation_estimate(visible_points_3d, visible_hamer_vertices, pcd)
+    T, aligned_hamer_pcd, visible_hamer_pcd = get_transformation_estimate(visible_points_3d, visible_hamer_vertices, pcd, full_pcd)
     # visualize_pcds([aligned_hamer_pcd, pcd])
     finger_pts, finger_pcd = get_finger_pose(mesh, T)
     #visualize_pcds([finger_pcd, aligned_hamer_pcd, pcd])
@@ -140,7 +221,7 @@ def main(demo_path, debug):
 
     rgb_paths = sorted([os.path.join(demo_path, 'rgb', file) for file in os.listdir(os.path.join(demo_path, 'rgb')) if file.lower().endswith('.jpg')])
     depth_paths = sorted([os.path.join(demo_path, 'depth', file) for file in os.listdir(os.path.join(demo_path, 'depth'))])
-    mask_paths = sorted([os.path.join(demo_path, 'masks_hand2', file) for file in os.listdir(os.path.join(demo_path, 'masks_hand'))])
+    mask_paths = sorted([os.path.join(demo_path, 'masks_hand2', file) for file in os.listdir(os.path.join(demo_path, 'masks_hand2'))])
     assert len(rgb_paths) == len(depth_paths)
     assert len(rgb_paths) == len(mask_paths)
     cam_intrinsics_path = "/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/cam_K.txt"
@@ -151,7 +232,6 @@ def main(demo_path, debug):
     
     for i in tqdm(range(len(rgb_paths))): 
         idx = rgb_paths[i][-9:-4]
-        print(idx)
 
         # Get data
         img_rgb = np.array(Image.open(rgb_paths[i]))
