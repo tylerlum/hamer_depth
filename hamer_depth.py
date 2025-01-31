@@ -84,12 +84,12 @@ def get_initial_transformation_estimate(visible_points_3d: np.ndarray,
     valid_idxs = visible_points_3d[:, 2] > 0
     
     # OLD
-    # close_idxs = distances < 0.5 # 0.2 # Screening out points more than 15cm away to not affect initial transform estimate
+    close_idxs = distances < 0.5 # Screening out points more than 0.5m away to not affect initial transform estimate
     # translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
 
     # NEW
-    valid_visible_points_3d = visible_points_3d[valid_idxs]
-    valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs]
+    valid_visible_points_3d = visible_points_3d[valid_idxs & close_idxs]
+    valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs & close_idxs]
     largest_cluster_points, largest_cluster_indices = find_connected_clusters(valid_visible_points_3d, distance_threshold=0.05)
     translation = np.nanmedian(valid_visible_points_3d[largest_cluster_indices] - valid_visible_hamer_vertices[largest_cluster_indices], axis=0)
 
@@ -114,13 +114,14 @@ def get_transformation_estimate(visible_points_3d: np.ndarray,
     # hand_center = np.mean(visible_hamer_vertices, axis=0)
     # distances = np.linalg.norm(visible_points_3d - hand_center[None], axis=1)
     # valid_idxs = visible_points_3d[:, 2] > 0
+    
     # # OLD
-    # # close_idxs = distances < 0.5 # 0.2 # Screening out points more than 15cm away to not affect initial transform estimate
+    # close_idxs = distances < 0.5 # Screening out points more than 1m away to not affect initial transform estimate
     # # translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
 
     # # NEW
-    # valid_visible_points_3d = visible_points_3d[valid_idxs]
-    # valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs]
+    # valid_visible_points_3d = visible_points_3d[valid_idxs & close_idxs]
+    # valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs & close_idxs]
     # largest_cluster_points, largest_cluster_indices = find_connected_clusters(valid_visible_points_3d, distance_threshold=0.05)
     # translation = np.nanmedian(valid_visible_points_3d[largest_cluster_indices] - valid_visible_hamer_vertices[largest_cluster_indices], axis=0)
 
@@ -130,16 +131,15 @@ def get_transformation_estimate(visible_points_3d: np.ndarray,
         aligned_hamer_pcd, T = icp_registration(visible_hamer_pcd, pcd, voxel_size=0.005, init_transform=T_0)
         from scipy.spatial.transform import Rotation as R
         T_copy = T.copy()
-        if (np.absolute(R.from_matrix(T_copy[:3, :3]).as_euler('xyz', degrees=True)) > 90).any(): # Checking ICP output is not flipped
+        if (np.absolute(R.from_matrix(T_copy[:3, :3]).as_euler('xyz', degrees=True)) > 45).any(): # Checking ICP output is not flipped
             print(T)
             print("HAND FLIPPED OR IS TOO FAR AWAY - USING HAMER")
             T = T_0
             aligned_hamer_pcd = visible_hamer_pcd_copy.transform(T)
     except:
         print("ICP FAILED - ENTERING EXCEPTION")
-        # np.eye(4)?
         return T_0, None, visible_hamer_pcd
-    # visualize_pcds([aligned_hamer_pcd, pcd, full_pcd])
+    # visualize_pcds([aligned_hamer_pcd, visible_hamer_pcd_copy, pcd, full_pcd])
     # breakpoint()
     return T, aligned_hamer_pcd, visible_hamer_pcd
 
@@ -232,6 +232,7 @@ def main(demo_path, debug):
     
     for i in tqdm(range(len(rgb_paths))): 
         idx = rgb_paths[i][-9:-4]
+        print(idx)
 
         # Get data
         img_rgb = np.array(Image.open(rgb_paths[i]))
