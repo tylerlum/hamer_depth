@@ -124,6 +124,16 @@ def visualize_pcds(list_pcds: list, visible: bool=True) -> np.ndarray:
     opt.background_color = np.asarray([0.2, 0.2, 0.2])
     for pcd in list_pcds:
         vis.add_geometry(pcd)
+    # Set camera
+    view_control = vis.get_view_control()
+    camera_params = view_control.convert_to_pinhole_camera_parameters()
+    camera_params.extrinsic = np.array([
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],  # Move camera 2 units back along z-axis
+        [0, 0, 0, 1]
+    ])
+    view_control.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
     vis.poll_events()
     vis.update_renderer()
     if not visible:

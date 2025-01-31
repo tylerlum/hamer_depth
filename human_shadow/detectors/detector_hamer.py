@@ -178,7 +178,7 @@ class DetectorHamer:
         Get bounding boxes of the hands in the image for HaMeR.
         """
         # Get initial bounding boxes
-        bboxes, scores, debug_bboxes = self.get_bboxes(img)
+        bboxes, scores, debug_bboxes = self.get_bboxes(img) # Turned detectron off cuz bad
 
         y_indices, x_indices = np.where(img_mask[:, :, 0]) 
         # Get min/max coordinates
@@ -195,7 +195,54 @@ class DetectorHamer:
             bboxes = sam_bboxes
             is_right = np.array([True])
             return bboxes, is_right, debug_bboxes
-         
+
+        def calculate_iou(bbox1, bbox2):
+            """
+            Calculate the Intersection over Union (IOU) between two bounding boxes.
+            
+            Args:
+                bbox1: numpy array of shape (4,) with [min_x, min_y, max_x, max_y]
+                bbox2: numpy array of shape (4,) with [min_x, min_y, max_x, max_y]
+            
+            Returns:
+                float: IOU score between 0 and 1
+            """
+            # Get intersection rectangle coordinates
+            x_left = max(bbox1[0], bbox2[0])
+            y_top = max(bbox1[1], bbox2[1])
+            x_right = min(bbox1[2], bbox2[2])
+            y_bottom = min(bbox1[3], bbox2[3])
+            
+            # Check if there is no intersection
+            if x_right < x_left or y_bottom < y_top:
+                return 0.0
+            
+            # Calculate intersection area
+            intersection_area = (x_right - x_left) * (y_bottom - y_top)
+            
+            # Calculate areas of both bounding boxes
+            bbox1_area = (bbox1[2] - bbox1[0]) * (bbox1[3] - bbox1[1])
+            bbox2_area = (bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1])
+            
+            # Calculate union area
+            union_area = bbox1_area + bbox2_area - intersection_area
+            
+            # Calculate IOU
+            iou = intersection_area / union_area
+            
+            return iou
+
+        for bbox in bboxes:
+            sam_bbox = sam_bboxes[0]
+            if calculate_iou(np.array(bbox), np.array(sam_bbox)) > 0.1:
+                return np.array([bbox]), np.array([True]), debug_bboxes
+        
+        # Worst case, always use SAM
+        bboxes = sam_bboxes
+        is_right = np.array([True])
+        return bboxes, is_right, debug_bboxes
+
+        raise ValueError("No bounding boxes found with IOU > 0.5")
         if not use_vitposes:
             is_right = self._assign_hand_type(bboxes, hand_type)
             return bboxes, is_right, debug_bboxes
@@ -228,7 +275,7 @@ class DetectorHamer:
  
 
     def get_bboxes(self, img: np.ndarray, use_dino: bool=True, 
-                   use_detectron: bool=True, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray, dict]:
+                   use_detectron: bool=False, visualize: bool=False) -> Tuple[np.ndarray, np.ndarray, dict]:
         """
         Get bounding boxes around the hands using the Dino or Detectron detectors
         """
