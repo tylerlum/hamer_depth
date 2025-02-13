@@ -1,6 +1,5 @@
 import os
 import argparse
-import copy
 from PIL import Image
 import numpy as np
 import cv2
@@ -83,6 +82,12 @@ def get_initial_transformation_estimate(visible_points_3d: np.ndarray,
     hand_center = np.mean(visible_hamer_vertices, axis=0)
     distances = np.linalg.norm(visible_points_3d - hand_center[None], axis=1)
     valid_idxs = visible_points_3d[:, 2] > 0
+    
+    # OLD
+    close_idxs = distances < 0.5 # Screening out points more than 0.5m away to not affect initial transform estimate
+    # translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
+
+    # NEW
     valid_visible_points_3d = visible_points_3d[valid_idxs & close_idxs]
     valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs & close_idxs]
     largest_cluster_points, largest_cluster_indices = find_connected_clusters(valid_visible_points_3d, distance_threshold=0.05)
@@ -102,20 +107,41 @@ def get_transformation_estimate(visible_points_3d: np.ndarray,
     """
     T_0 = get_initial_transformation_estimate(visible_points_3d, visible_hamer_vertices)
     visible_hamer_pcd = get_pcd_from_points(visible_hamer_vertices, colors=np.ones_like(visible_hamer_vertices) * [0, 1, 0])
+    import copy
     visible_hamer_pcd_copy = copy.deepcopy(visible_hamer_pcd)
+
+
+    # hand_center = np.mean(visible_hamer_vertices, axis=0)
+    # distances = np.linalg.norm(visible_points_3d - hand_center[None], axis=1)
+    # valid_idxs = visible_points_3d[:, 2] > 0
+    
+    # # OLD
+    # close_idxs = distances < 0.5 # Screening out points more than 1m away to not affect initial transform estimate
+    # # translation = np.nanmedian(visible_points_3d[valid_idxs & close_idxs] - visible_hamer_vertices[valid_idxs & close_idxs], axis=0)
+
+    # # NEW
+    # valid_visible_points_3d = visible_points_3d[valid_idxs & close_idxs]
+    # valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs & close_idxs]
+    # largest_cluster_points, largest_cluster_indices = find_connected_clusters(valid_visible_points_3d, distance_threshold=0.05)
+    # translation = np.nanmedian(valid_visible_points_3d[largest_cluster_indices] - valid_visible_hamer_vertices[largest_cluster_indices], axis=0)
+
+    # visualize_pcds([visible_hamer_pcd, pcd, full_pcd, get_pcd_from_points(valid_visible_points_3d[largest_cluster_indices], colors=np.ones_like(valid_visible_points_3d[largest_cluster_indices]) * [1, 0, 0])])
+    # breakpoint()
     try: 
         aligned_hamer_pcd, T = icp_registration(visible_hamer_pcd, pcd, voxel_size=0.005, init_transform=T_0)
         from scipy.spatial.transform import Rotation as R
         T_copy = T.copy()
         if (np.absolute(R.from_matrix(T_copy[:3, :3]).as_euler('xyz', degrees=True)) > 45).any(): # Checking ICP output is not flipped
             print("Old T", T)
-            print("Hand is flipped or too far away - using HaMeR prediction")
+            print("HAND FLIPPED OR IS TOO FAR AWAY - USING HAMER")
             T = T_0
             aligned_hamer_pcd = visible_hamer_pcd_copy.transform(T)
             print("New T", T)
     except:
-        print("ICP failed")
+        print("ICP FAILED - ENTERING EXCEPTION")
         return T_0, None, visible_hamer_pcd
+    # visualize_pcds([aligned_hamer_pcd, visible_hamer_pcd_copy, pcd, full_pcd])
+    # breakpoint()
     return T, aligned_hamer_pcd, visible_hamer_pcd
 
 
@@ -123,6 +149,28 @@ def get_finger_pose(mesh: trimesh.Trimesh, T: np.ndarray) -> Tuple[dict, o3d.geo
     """
     Get the 3D locations of the thumb, index finger, and hand end effector points in the world frame.
     """
+    # Visualize the entire mesh and their vertices
+    # highlight_indices = list(range(0, 778))
+    # highlight_points = mesh.vertices[highlight_indices]
+    # highlight_pcd = get_pcd_from_points(highlight_points)
+    # visualize_pcds([highlight_pcd])
+    # import matplotlib.pyplot as plt
+    # import matplotlib 
+    # matplotlib.use('TkAgg')
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(highlight_points[:, 0], highlight_points[:, 1], highlight_points[:, 2], s=20, label="Points")
+    # ax.scatter(highlight_points[350, 0], highlight_points[350, 1], highlight_points[350, 2], s=100, label="Thumb")
+    # ax.scatter(highlight_points[756, 0], highlight_points[756, 1], highlight_points[756, 2], s=100, label="Index")
+    # for i, (xi, yi, zi) in enumerate(zip(highlight_points[:, 0], highlight_points[:, 1], highlight_points[:, 2])):
+    #     if i == 350 or i == 756:
+    #         ax.text(xi, yi, zi, str(i), color='red', fontsize=8)
+    #     ax.text(xi, yi, zi, str(i), color='black', fontsize=8)
+    # ax.set_xlabel('X')
+    # ax.set_ylabel('Y')
+    # ax.set_zlabel('Z')
+    # plt.show()
+
     thumb_pt = mesh.vertices[THUMB_VERTEX]
     index_pt = mesh.vertices[INDEX_FINGER_VERTEX]
     middle_pt = mesh.vertices[MIDDLE_FINGER_VERTEX]
@@ -147,13 +195,29 @@ def process_image_with_hamer(img_rgb: np.ndarray, img_depth: np.ndarray, mask: n
         raise ValueError("No hand detected in image")
     mesh = trimesh.Trimesh(hamer_out["verts"].copy(), detector_hamer.faces_right.copy())
     visible_points_3d, visible_hamer_vertices = get_visible_pts_from_hamer(detector_hamer, hamer_out, mesh, img_depth, cam_intrinsics)
+    # visualize_pcds([pcd, full_pcd, get_pcd_from_points(visible_hamer_vertices, colors=np.ones_like(visible_hamer_vertices) * [0, 1, 0])])
     T, aligned_hamer_pcd, visible_hamer_pcd = get_transformation_estimate(visible_points_3d, visible_hamer_vertices, pcd, full_pcd)
+    # visualize_pcds([aligned_hamer_pcd, pcd])
     finger_pts, finger_pcd = get_finger_pose(mesh, T)
+    #visualize_pcds([finger_pcd, aligned_hamer_pcd, pcd])
     transformed_mesh = mesh.apply_transform(T)
+
+    pcd_mesh = o3d.geometry.TriangleMesh()
+    pcd_mesh.vertices = o3d.utility.Vector3dVector(np.array(mesh.vertices))
+    pcd_mesh.triangles = o3d.utility.Vector3iVector(np.array(mesh.faces))
+    pcd_mesh.compute_vertex_normals()
+    # visualize_pcds([pcd, visible_hamer_pcd, pcd_mesh])
+
+    tfm_mesh = o3d.geometry.TriangleMesh()
+    tfm_mesh.vertices = o3d.utility.Vector3dVector(np.array(transformed_mesh.vertices))
+    tfm_mesh.triangles = o3d.utility.Vector3iVector(np.array(transformed_mesh.faces))
+    tfm_mesh.compute_vertex_normals()
+    # visualize_pcds([pcd, aligned_hamer_pcd, tfm_mesh])
+    # visualize_pcds([pcd, visible_hamer_pcd, aligned_hamer_pcd])
 
     return pcd, hamer_out, mesh, aligned_hamer_pcd, finger_pts, finger_pcd, transformed_mesh
 
-def main(demo_path):
+def main(demo_path, debug):
     detector_hamer = DetectorHamer()
 
     rgb_paths = sorted([os.path.join(demo_path, 'rgb', file) for file in os.listdir(os.path.join(demo_path, 'rgb')) if file.lower().endswith('.jpg')])
@@ -190,10 +254,22 @@ def main(demo_path):
         print(out_path)
         if not os.path.exists(os.path.join(out_path)):
             os.makedirs(os.path.join(out_path))
+        
+        if debug:
+            o3d.io.write_point_cloud(os.path.join("/juno/u/oliviayl/repos/cross_embodiment/human_shadow/original.pcd"), pcd)
+            o3d.io.write_point_cloud(os.path.join("/juno/u/oliviayl/repos/cross_embodiment/human_shadow/aligned_hamer_pcd.pcd"), aligned_hamer_pcd)
+            o3d.io.write_point_cloud(os.path.join("/juno/u/oliviayl/repos/cross_embodiment/human_shadow/finger_pcd.pcd"), finger_pcd)
         transformed_mesh.export(os.path.join(out_path, f"{idx}.obj"))
+        
+        # mesh.export(os.path.join(out_path, f"{idx}.obj"))
         cv2.imwrite(os.path.join(out_path, f"{idx}.png"), hamer_out["annotated_img"])
         joint_poses = hamer_out['kpts_3d']
         assert(joint_poses.shape == (21, 3))
+        
+        # joint_names = ['wrist', 'thumb_0', 'thumb_1', 'thumb_2', 'thumb_3', 'index_0', 'index_1', 'index_2', 'index_3', 'middle_0', 'middle_1', 'middle_2', 'middle_3', 'ring_0', 'ring_1', 'ring_2', 'ring_3', 'pinky_0', 'pinky_1', 'pinky_2', 'pinky_3']
+        # for j, pos in enumerate(joint_poses):
+        #     joint_pos = pos
+        #     frame_data[joint_names[j]] = joint_pos.tolist()
 
         joint_names = [ "wrist_back", "wrist_front", "index_0_back", "index_0_front", "middle_0_back", "middle_0_front", "ring_0_back", "ring_0_front", "index_3", "middle_3", "ring_3", "thumb_3", ]
         frame_data = {}
@@ -207,6 +283,7 @@ def main(demo_path):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--demo_path', type=str, default='/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/final_scene/plate_pivotrack')
+    parser.add_argument('--debug', type=bool, default=False, help='Output folder to save rendered results')
     args = parser.parse_args()
 
-    main(args.demo_path)
+    main(args.demo_path, args.debug)
