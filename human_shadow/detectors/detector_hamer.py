@@ -26,7 +26,6 @@ from tqdm import tqdm
 from vitpose_model import ViTPoseModel
 from yacs.config import CfgNode as CN
 
-from human_shadow.config.logger_config import *
 from human_shadow.detectors.detector_detectron2 import DetectorDetectron2
 from human_shadow.detectors.detector_dino import DetectorDino
 from human_shadow.utils.file_utils import get_parent_folder_of_package
