@@ -12,11 +12,8 @@ from PIL import Image
 from scipy.spatial import cKDTree
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
+import json
 
-from human_shadow.camera.zed_utils import (
-    convert_intrinsics_matrix_to_dict,
-    get_intrinsics_from_json,
-)
 from human_shadow.detectors.detector_hamer import (
     INDEX_FINGER_VERTEX,
     INDEX_KNUCKLE_VERTEX_BACK,
@@ -39,7 +36,33 @@ from human_shadow.utils.pcd_utils import (
     get_visible_points,
     icp_registration,
 )
-from human_shadow.utils.transform_utils import transform_pts
+
+
+def transform_pts(pts: np.ndarray, T: np.ndarray) -> np.ndarray:
+    pts = np.hstack([pts, np.ones((len(pts), 1))])
+    pts = np.dot(T, pts.T).T
+    return pts[:, :3]
+
+
+def convert_intrinsics_matrix_to_dict(camera_matrix):
+    fx = camera_matrix[0, 0]
+    fy = camera_matrix[1, 1]
+    cx = camera_matrix[0, 2]
+    cy = camera_matrix[1, 2]
+    intrinsics = {
+        "fx": fx,
+        "fy": fy,
+        "cx": cx,
+        "cy": cy,
+    }
+    return intrinsics
+
+
+def get_intrinsics_from_json(json_path: str):
+    with open(json_path, "r") as f:
+        camera_matrix = np.loadtxt(f)
+
+    return camera_matrix
 
 
 def find_connected_clusters(points, distance_threshold=0.05):
