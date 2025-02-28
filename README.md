@@ -1,142 +1,49 @@
-# Human Shadow
+# HaMeR Depth
+
+Hand pose estimation with HaMeR and RGB images, then improving the predictions with depth images.
 
 ## Installation
-Install the repo in your env by running this command in the top level human_shadow directory.
+
+First we install [HaMeR](https://github.com/geopavlakos/hamer). We copy their instructions here:
+
 ```
+git clone --recursive https://github.com/geopavlakos/hamer.git
+cd hamer
+conda create --name hamer_depth_env python=3.10
+conda activate hamer_depth_env
+
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu117
+conda install -c "nvidia/label/cuda-11.7.0" cuda-toolkit
+pip install pytorch-lightning
+pip install numpy==1.24
+pip install -e .[all]
+pip install -v -e third-party/ViTPose
+
+bash fetch_demo_data.sh
+```
+
+Besides these files, you also need to download the MANO model. Please visit the [MANO website](https://mano.is.tue.mpg.de/) and register to get access to the downloads section. We only require the right hand model. You need to put `MANO_RIGHT.pkl` under the `_DATA/data/mano folder`.
+
+Test that HaMeR works by running:
+
+```
+python demo.py \
+    --img_folder example_data --out_folder demo_out \
+    --batch_size=48 --side_view --save_mesh --full_frame
+```
+
+Next, install this repo by running this command in the top level hamer_depth directory.
+
+```
+git clone https://github.com/tylerlum/hamer_depth.git
+cd hamer_depth
 pip install -e .
 ```
 
 In order to visualize point clouds, you may need to set init_renderer: bool = False in HaMeR's hamer/model/hamer.py file to ensure that HaMeR's visualizer doesn't cause errors with our open3d visualizer. 
 
-
-
-## Video processing
-1. Process every video to extract hand segmentation masks and poses:
-To process every video in /juno/group/shared/raw_data/data_jiaying_1
 ```
-python process_human_data.py --demo_name data_jiaying_1 --use_shared
+python run.py TODO
 ```
 
-To process every video in human_shadow/human_shadow/data/videos/data_jiaying_1
-```
-python process_human_data.py --demo_name data_jiaying_1
-```
-
-2. Extract the segmentation masks of the robot
-```
-python generate_robot_seg_overlay.py --demo_name data_jiaying_1 --use_shared
-```
-or
-```
-python generate_robot_seg_overlay.py --demo_name data_jiaying_1 
-```
-
-
-## Data collection 
-### View ZED camera images live
- ```
- cd human_shadow/camera/
- python zed_redis_driver.py --resolution HD1080 --depth_mode NEURAL --render
-```
-
-
-### Collect human demonstrations 
- ```
- cd human_shadow
- python collect_human_data.py --folder demo_name -hz 30 --depth_mode NEURAL --resolution HD1080
-```
-
-## RedisGL Franka + HaMeR visualization 
-On Franka NUC:
-1. Run 
- ```
- cd marion/franka-panda.git/bin
- ./franka_panda_driver ../resources/default.yaml
-```
-
-On bohg-franka:
-1. In window 1, run 
- ```
- cd redis-gl
- ./server.py
-```
-
-2. In window 2, run 
- ```
- cd franka-panda/bin/
- ./franka_panda_opspace -g robotiq --mirror --robot_host 172.24.68.230 --robot_pass iprl
-```
-
-3. In window 3, run
- ```
- cd human_shadow/human_shadow/camera/
- python zed_redis_driver.py --resolution HD1080 --depth_mode NEURAL
-```
-
-4. In window 4, run 
- ```
-cd human_shadow/human_shadow/
-python visualize_hand_redis.py --render
-```
-
-5. In chrome, go to http://localhost:8000/simulator.html
-
-
-
-
-## Real robot guide 
-
-### Networking 
-On the Franka Nuc, ensure that 
-* PCI Ethernet is connected to "Internet"
-* USB Ethernet is connected to "FR3"
-
-### Running the franka (on franka nuc)
-1. In window 1, run 
- ```
- cd marion/franka-panda.git/bin
- ./franka_panda_driver ../resources/default.yaml
-```
-2. In window 2, run 
- ```
- cd marion/franka-panda.git/bin
- ./franka_panda_opspace -g robotiq -a iprl
-```
-
-### Running the robotiq gripper (on franka nuc)
-1. In window 1, run 
- ```
- cd franka/robotiq-gripper.git/bin
- ./robotiq_gripper_driver /dev/ttyUSB0
-```
-
-### Camera calibration
-#### Simulation check (on bohg-franka)
-1. In window 1, run  
- ```
- conda activate xembodiment
- cd redis-gl
-./server.py
-```
-2. In window 2, run 
- ```
- conda activate xembodiment
- cd franka-panda/bin
-./franka_panda_opspace --sim -g robotiq
-```
-3. In window 3, run 
- ```
- conda activate human_shadow
- cd human_shadow/camera
-python collect_calibration_data.py --name test --sim --resolution HD2K
-```
-
-#### Real data collection 
-1. Run the franka (see instructions above)
-2. Run the robotiq gripper (see instructions above)
-3. On bohg-franka, run
- ```
- conda activate human_shadow
- cd human_shadow/camera
-python collect_calibration_data.py --name test --resolution HD2K
-```
+Thanks to Marion Lepart and Jiaying Fang for writing most of this code!
