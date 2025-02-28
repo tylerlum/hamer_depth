@@ -1,6 +1,7 @@
 import argparse
 import copy
 import os
+from typing import Tuple
 
 import cv2
 import networkx as nx
@@ -9,9 +10,13 @@ import open3d as o3d
 import trimesh
 from PIL import Image
 from scipy.spatial import cKDTree
+from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 
-from human_shadow.camera.zed_utils import *
+from human_shadow.camera.zed_utils import (
+    convert_intrinsics_matrix_to_dict,
+    get_intrinsics_from_json,
+)
 from human_shadow.detectors.detector_hamer import (
     INDEX_FINGER_VERTEX,
     INDEX_KNUCKLE_VERTEX_BACK,
@@ -27,9 +32,14 @@ from human_shadow.detectors.detector_hamer import (
     WRIST_VERTEX_FRONT,
     DetectorHamer,
 )
-from human_shadow.utils.pcd_utils import *
-from human_shadow.utils.transform_utils import *
-from human_shadow.utils.video_utils import *
+from human_shadow.utils.pcd_utils import (
+    get_3D_points_from_pixels,
+    get_pcd_from_points,
+    get_point_cloud_of_segmask,
+    get_visible_points,
+    icp_registration,
+)
+from human_shadow.utils.transform_utils import transform_pts
 
 
 def find_connected_clusters(points, distance_threshold=0.05):
@@ -109,6 +119,9 @@ def get_initial_transformation_estimate(
     hand_center = np.mean(visible_hamer_vertices, axis=0)
     distances = np.linalg.norm(visible_points_3d - hand_center[None], axis=1)
     valid_idxs = visible_points_3d[:, 2] > 0
+    close_idxs = (
+        distances < 0.5
+    )  # Screening out points more than 0.5m away to not affect initial transform estimate
     valid_visible_points_3d = visible_points_3d[valid_idxs & close_idxs]
     valid_visible_hamer_vertices = visible_hamer_vertices[valid_idxs & close_idxs]
     largest_cluster_points, largest_cluster_indices = find_connected_clusters(
@@ -130,8 +143,8 @@ def get_transformation_estimate(
     visible_points_3d: np.ndarray,
     visible_hamer_vertices: np.ndarray,
     pcd: o3d.geometry.PointCloud,
-    full_pcd,
-) -> Tuple[np.ndarray, o3d.geometry.PointCloud]:
+    full_pcd: o3d.geometry.PointCloud,
+) -> Tuple[np.ndarray, o3d.geometry.PointCloud, o3d.geometry.PointCloud]:
     """
     Align the hamer point cloud (with only visible points) with the full arm point cloud using initial translation prediction
     """
@@ -144,7 +157,6 @@ def get_transformation_estimate(
         aligned_hamer_pcd, T = icp_registration(
             visible_hamer_pcd, pcd, voxel_size=0.005, init_transform=T_0
         )
-        from scipy.spatial.transform import Rotation as R
 
         T_copy = T.copy()
         if (
