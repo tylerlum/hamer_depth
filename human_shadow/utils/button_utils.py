@@ -14,10 +14,13 @@ class Button:
     def reset(self):
         pygame.event.get()
 
-    def is_pressed(self, up: bool=False) -> bool:
+    def is_pressed(self, up: bool = False) -> bool:
         for event in pygame.event.get():
             if up:
-                if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
+                if (
+                    event.type == pygame.JOYBUTTONDOWN
+                    or event.type == pygame.JOYBUTTONUP
+                ):
                     return True
             else:
                 if event.type == pygame.JOYBUTTONDOWN:
@@ -30,4 +33,3 @@ class Button:
             button_pressed = self.is_pressed(up=True)
         pygame.event.get()
         return button_pressed
-

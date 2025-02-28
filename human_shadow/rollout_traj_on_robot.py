@@ -1,15 +1,16 @@
-import pdb 
-import matplotlib.pyplot as plt
-import numpy as np
-import json
 import argparse
+import json
+import pdb
 import time
-from tqdm import tqdm
-from scipy.spatial.transform import Rotation
 
-from franka_utils.opspace_client import FrankaPanda, decode_matlab
-from human_shadow.robots.robotiq85_gripper import Robotiq85Gripper
+import numpy as np
+from franka_utils.opspace_client import FrankaPanda
+from scipy.spatial.transform import Rotation
+from tqdm import tqdm
+
 from human_shadow.config.redis_keys import *
+from human_shadow.robots.robotiq85_gripper import Robotiq85Gripper
+
 
 def transform_pt(pt, T):
     pt = np.array(pt)
@@ -20,7 +21,9 @@ def transform_pt(pt, T):
 
 def main(args):
     # Camera extrinsics
-    camera_extrinsics_path = "camera/camera_calibration_data/hand_calib_HD1080/cam_cal.json"
+    camera_extrinsics_path = (
+        "camera/camera_calibration_data/hand_calib_HD1080/cam_cal.json"
+    )
     with open(camera_extrinsics_path, "r") as f:
         camera_extrinsics = json.load(f)
     cam_base_pos = np.array(camera_extrinsics[0]["camera_base_pos"])
@@ -55,7 +58,7 @@ def main(args):
         hand_ee_pos.append(hand_ee_pt)
         hand_index_pos.append(hand_index_pt)
         hand_thumb_pos.append(hand_thumb_pt)
-        
+
         dist = np.linalg.norm(hand_thumb_pt - hand_index_pt)
         if dist > gripper_thresh:
             robotiq_command.append(0)
@@ -63,8 +66,7 @@ def main(args):
             robotiq_command.append(1)
         gripper_distance.append(dist)
 
-
-# 0.01277384 -0.02124954  0.65372316
+    # 0.01277384 -0.02124954  0.65372316
     hand_ee_pos = np.array(hand_ee_pos)
     robotiq_command = np.array(robotiq_command)
 
@@ -84,11 +86,9 @@ def main(args):
     eef_pos_cur, eef_quatxyzw_cur = robot.get_pose()
     rot = Rotation.from_quat(eef_quatxyzw_cur, scalar_first=False)
     # Rotate by 90 deg about z
-    rot = rot * Rotation.from_euler("z", -np.pi/2)
+    rot = rot * Rotation.from_euler("z", -np.pi / 2)
     eef_quatxyzw_cur = rot.as_quat()
     robot.goto_pose_with_traj(hand_ee_pos[0], eef_quatxyzw_cur)
-
-
 
     for idx in tqdm(range(n_pts)):
         # Get pose of eef in world frame
@@ -100,14 +100,11 @@ def main(args):
         time.sleep(0.2)
 
 
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sim", action="store_true", help="Run in simulation mode")
     args = parser.parse_args()
     main(args)
-
 
 
 # fig = plt.figure()

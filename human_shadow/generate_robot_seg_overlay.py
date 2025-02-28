@@ -1,58 +1,66 @@
-
-import pdb
-import os
+import argparse
 import json
-from tqdm import tqdm
-import numpy as np 
 import logging
-import argparse 
+import os
 from typing import Tuple
 
-import pandas as pd
-import logging
 import mediapy as media
+import numpy as np
+import pandas as pd
 from scipy.spatial.transform import Rotation
+from tqdm import tqdm
 
 from human_shadow.utils.file_utils import get_parent_folder_of_package
-from human_shadow.camera.zed_utils import ZED_RESOLUTIONS
 from human_shadow.utils.transform_utils import transform_pt
 from human_shadow.virtual_twin.twin_robot import *
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def convert_human_orientation_to_robot_orientation(thumb_pos: np.ndarray, index_pos: np.ndarray) -> np.ndarray:
+def convert_human_orientation_to_robot_orientation(
+    thumb_pos: np.ndarray, index_pos: np.ndarray
+) -> np.ndarray:
     """Convert orientation of human hand to orientation of robot gripper."""
     finger_vector = index_pos - thumb_pos
     base_vector = np.array([0, 1, 0])
-    angle = np.arccos(np.dot(finger_vector, base_vector) / (np.linalg.norm(finger_vector) * np.linalg.norm(base_vector)))
+    angle = np.arccos(
+        np.dot(finger_vector, base_vector)
+        / (np.linalg.norm(finger_vector) * np.linalg.norm(base_vector))
+    )
 
     base_ori_xyzw = np.array([1, 0, 0, 0])
     r_base = Rotation.from_quat(base_ori_xyzw, scalar_first=False)
     r_180 = Rotation.from_euler("z", np.pi, degrees=False)
     r_human = Rotation.from_euler("z", -angle, degrees=False)
-    robot_rot =  r_human * r_180 * r_base
+    robot_rot = r_human * r_180 * r_base
     robot_ori_xyzw = robot_rot.as_quat(scalar_first=False)
     return robot_ori_xyzw
 
 
-def convert_human_gripper_to_robot_gripper(thumb_pos: np.ndarray, index_pos: np.ndarray) -> float:
+def convert_human_gripper_to_robot_gripper(
+    thumb_pos: np.ndarray, index_pos: np.ndarray
+) -> float:
     """Convert human gripper opening to robot gripper opening."""
     finger_vector = index_pos - thumb_pos
     gripper_pos = np.linalg.norm(finger_vector)
     return float(gripper_pos)
 
 
-def convert_human_to_robot_action(thumb_pos: np.ndarray, index_pos: np.ndarray, hand_ee_pos: np.ndarray, 
-                                  T_cam2robot: np.ndarray) -> dict:
+def convert_human_to_robot_action(
+    thumb_pos: np.ndarray,
+    index_pos: np.ndarray,
+    hand_ee_pos: np.ndarray,
+    T_cam2robot: np.ndarray,
+) -> dict:
     """Convert human hand action to robot gripper action."""
     thumb_pos = transform_pt(thumb_pos, T_cam2robot)
     hand_ee_pos = transform_pt(hand_ee_pos, T_cam2robot)
     index_pos = transform_pt(index_pos, T_cam2robot)
 
-    robot_ori_xyzw = convert_human_orientation_to_robot_orientation(thumb_pos, index_pos)
+    robot_ori_xyzw = convert_human_orientation_to_robot_orientation(
+        thumb_pos, index_pos
+    )
     gripper_action = convert_human_gripper_to_robot_gripper(thumb_pos, index_pos)
 
     return {
@@ -66,9 +74,15 @@ def convert_human_to_robot_action(thumb_pos: np.ndarray, index_pos: np.ndarray, 
 def get_finger_poses(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Get human finger poses from csv file."""
     finger_poses = pd.read_csv(path)
-    finger_poses["thumb"] = finger_poses["thumb"].apply(lambda x: np.fromstring(x.strip('[]'), sep=' '))
-    finger_poses["index"] = finger_poses["index"].apply(lambda x: np.fromstring(x.strip('[]'), sep=' '))
-    finger_poses["hand_ee"] = finger_poses["hand_ee"].apply(lambda x: np.fromstring(x.strip('[]'), sep=' '))
+    finger_poses["thumb"] = finger_poses["thumb"].apply(
+        lambda x: np.fromstring(x.strip("[]"), sep=" ")
+    )
+    finger_poses["index"] = finger_poses["index"].apply(
+        lambda x: np.fromstring(x.strip("[]"), sep=" ")
+    )
+    finger_poses["hand_ee"] = finger_poses["hand_ee"].apply(
+        lambda x: np.fromstring(x.strip("[]"), sep=" ")
+    )
     thumb_poses = finger_poses["thumb"].values
     index_poses = finger_poses["index"].values
     hand_ee_poses = finger_poses["hand_ee"].values
@@ -82,7 +96,10 @@ def get_first_nonzero_index(arr: np.ndarray) -> int:
         return nonzero_index[0]
     return 0
 
-def get_start_idx(thumb_poses: np.ndarray, index_poses: np.ndarray, hand_ee_poses: np.ndarray) -> int:
+
+def get_start_idx(
+    thumb_poses: np.ndarray, index_poses: np.ndarray, hand_ee_poses: np.ndarray
+) -> int:
     """Get index of first frame where hand is visible."""
     thumb_zero_index = get_first_nonzero_index(thumb_poses)
     index_zero_index = get_first_nonzero_index(index_poses)
@@ -95,28 +112,51 @@ def main(args):
     project_folder = get_parent_folder_of_package("human_shadow")
 
     # Extrinsics
-    camera_extrinsics_path = os.path.join(project_folder, f"human_shadow/camera/camera_calibration_data/hand_calib_{resolution}/cam_cal.json")
+    camera_extrinsics_path = os.path.join(
+        project_folder,
+        f"human_shadow/camera/camera_calibration_data/hand_calib_{resolution}/cam_cal.json",
+    )
     with open(camera_extrinsics_path, "r") as f:
         camera_extrinsics = json.load(f)
     T_cam2robot = get_transformation_matrix_from_extrinsics(camera_extrinsics)
 
     # Intrinsics
-    camera_intrinsics_path = os.path.join(project_folder, f"human_shadow/camera/intrinsics/camera_intrinsics_{resolution}.json")
+    camera_intrinsics_path = os.path.join(
+        project_folder,
+        f"human_shadow/camera/intrinsics/camera_intrinsics_{resolution}.json",
+    )
     with open(camera_intrinsics_path, "r") as f:
         camera_intrinsics = json.load(f)
 
     # Initialize mujoco camera
-    camera_params = get_mujoco_camera_params(resolution, camera_extrinsics, camera_intrinsics)
+    camera_params = get_mujoco_camera_params(
+        resolution, camera_extrinsics, camera_intrinsics
+    )
 
-    # Get data paths 
+    # Get data paths
     if args.use_shared:
-        videos_folder = os.path.join("/juno/group/human_shadow/processed_data/", args.demo_name)
+        videos_folder = os.path.join(
+            "/juno/group/human_shadow/processed_data/", args.demo_name
+        )
     else:
-        videos_folder = os.path.join(project_folder, f"human_shadow/data/videos/processed/{args.demo_name}/")
-    all_video_folders = [f for f in os.listdir(videos_folder) if os.path.isdir(os.path.join(videos_folder, f))]
+        videos_folder = os.path.join(
+            project_folder, f"human_shadow/data/videos/processed/{args.demo_name}/"
+        )
+    all_video_folders = [
+        f
+        for f in os.listdir(videos_folder)
+        if os.path.isdir(os.path.join(videos_folder, f))
+    ]
     all_video_folders = sorted(all_video_folders, key=lambda x: int(x))
 
-    twin_robot = TwinRobot("PandaReal", "Robotiq85", camera_params, camera_res=1080, render=args.render, n_steps_short=3)
+    twin_robot = TwinRobot(
+        "PandaReal",
+        "Robotiq85",
+        camera_params,
+        camera_res=1080,
+        render=args.render,
+        n_steps_short=3,
+    )
 
     for human_data_subfolder in all_video_folders:
         human_data_folder = os.path.join(videos_folder, human_data_subfolder)
@@ -138,7 +178,7 @@ def main(args):
         # Initialize virtual twin robot in mujoco
         start_idx = get_start_idx(thumb_poses, index_poses, hand_ee_poses)
         twin_robot.reset()
-        
+
         # Generate masked images
         list_masked_imgs = []
         list_robot_masks = []
@@ -150,12 +190,15 @@ def main(args):
 
             human_mask = human_masks[idx]
             if human_mask.shape != (1080, 1080):
-                human_mask = human_mask[:,420:-420]
+                human_mask = human_mask[:, 420:-420]
 
-            target_robot_state = convert_human_to_robot_action(thumb_poses[idx], index_poses[idx], 
-                                                            hand_ee_poses[idx], T_cam2robot)
+            target_robot_state = convert_human_to_robot_action(
+                thumb_poses[idx], index_poses[idx], hand_ee_poses[idx], T_cam2robot
+            )
 
-            robot_mask, gripper_mask, rgb_img = twin_robot.move_to_target_state(target_robot_state, init=(idx == start_idx))
+            robot_mask, gripper_mask, rgb_img = twin_robot.move_to_target_state(
+                target_robot_state, init=(idx == start_idx)
+            )
             masked_img = np.ones_like(robot_mask) * 255
             masked_img[(robot_mask == 1) | (gripper_mask == 1) | (human_mask == 1)] = 0
 
@@ -163,22 +206,31 @@ def main(args):
             masked_img_robot[(robot_mask == 1) | (gripper_mask == 1)] = 0
 
             masked_human_imgs = human_imgs[idx].copy()
-            masked_human_imgs[(robot_mask == 1) | (gripper_mask == 1) | (human_mask == 1)] = 0
+            masked_human_imgs[
+                (robot_mask == 1) | (gripper_mask == 1) | (human_mask == 1)
+            ] = 0
 
             list_masked_imgs.append(np.squeeze(masked_img))
             list_robot_masks.append(np.squeeze(masked_img_robot))
             list_rgb_masked_imgs.append(masked_human_imgs)
 
-
         # Save masked images to video
-        masks_path = os.path.join(human_data_folder, f"imgs_masks_overlay.mkv")
-        media.write_video(masks_path, list_masked_imgs, fps=30, codec="ffv1", input_format="gray")
+        masks_path = os.path.join(human_data_folder, "imgs_masks_overlay.mkv")
+        media.write_video(
+            masks_path, list_masked_imgs, fps=30, codec="ffv1", input_format="gray"
+        )
 
-        robot_masks_path = os.path.join(human_data_folder, f"imgs_robot_masks.mkv")
-        media.write_video(robot_masks_path, list_robot_masks, fps=30, codec="ffv1", input_format="gray")
+        robot_masks_path = os.path.join(human_data_folder, "imgs_robot_masks.mkv")
+        media.write_video(
+            robot_masks_path,
+            list_robot_masks,
+            fps=30,
+            codec="ffv1",
+            input_format="gray",
+        )
         print(f"Saved masked images to {masks_path}")
 
-        rgb_masks_path = os.path.join(human_data_folder, f"imgs_rgb_masks_overlay.mkv")
+        rgb_masks_path = os.path.join(human_data_folder, "imgs_rgb_masks_overlay.mkv")
         media.write_video(rgb_masks_path, list_rgb_masked_imgs, fps=30, codec="ffv1")
 
 

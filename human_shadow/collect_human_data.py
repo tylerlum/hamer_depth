@@ -1,19 +1,15 @@
-import pdb 
-import json
 import argparse
 import os
 import time
-import re
-import curses
-import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 
 import mediapy as media
+import numpy as np
 import pyzed.sl as sl
 
-from human_shadow.utils.file_utils import get_parent_folder_of_package
 from human_shadow.camera.zed_utils import *
 from human_shadow.utils.button_utils import *
+from human_shadow.utils.file_utils import get_parent_folder_of_package
 from human_shadow.utils.image_utils import *
 
 
@@ -21,11 +17,19 @@ def create_output_folder(args):
     if args.save_to_shared:
         project_folder = "/juno/group/human_shadow/raw_data/"
     else:
-        project_folder = os.path.join(get_parent_folder_of_package("human_shadow"), "human_shadow/data/videos")
-    
+        project_folder = os.path.join(
+            get_parent_folder_of_package("human_shadow"), "human_shadow/data/videos"
+        )
+
     save_folder = os.path.join(project_folder, args.folder)
     os.makedirs(save_folder, exist_ok=True)
-    n_folders = len([f for f in os.listdir(save_folder) if os.path.isdir(os.path.join(save_folder, f))])
+    n_folders = len(
+        [
+            f
+            for f in os.listdir(save_folder)
+            if os.path.isdir(os.path.join(save_folder, f))
+        ]
+    )
     save_folder = os.path.join(save_folder, f"{n_folders}")
     os.makedirs(save_folder, exist_ok=True)
 
@@ -34,6 +38,7 @@ def create_output_folder(args):
     intrinsics_path = os.path.join(save_folder, f"cam_intrinsics_{n_folders}.json")
     depth_path = os.path.join(save_folder, f"depth_{n_folders}.npy")
     return left_video_path, right_video_path, depth_path, intrinsics_path
+
 
 def record_one_video(zed, camera_params, args, button):
     res = camera_params.left_cam.image_size
@@ -58,8 +63,9 @@ def record_one_video(zed, camera_params, args, button):
     while not button_pressed:
         start_time = time.time()
         if zed.grab() == sl.ERROR_CODE.SUCCESS:
-            img_left_rgb, img_right_rgb, depth_img_arr = capture_camera_data(zed, args.depth_mode, img_left, 
-            img_right, depth_img)
+            img_left_rgb, img_right_rgb, depth_img_arr = capture_camera_data(
+                zed, args.depth_mode, img_left, img_right, depth_img
+            )
             img_left_rgb = resize_img_to_square(img_left_rgb)
             img_right_rgb = resize_img_rgb = resize_img_to_square(img_right_rgb)
             depth_img_arr = resize_img_to_square(depth_img_arr)
@@ -69,7 +75,7 @@ def record_one_video(zed, camera_params, args, button):
             depth_imgs.append(depth_img_arr.copy())
 
             button_pressed = button.is_pressed()
-    
+
             while (time.time() - start_time) < dt:
                 pass
             loop_time = time.time() - start_time
@@ -87,11 +93,15 @@ def record_one_video(zed, camera_params, args, button):
 
     return left_imgs, right_imgs, depth_imgs
 
+
 def save_videos(left_video_path, right_video_path, left_imgs, right_imgs, args):
     executor = ThreadPoolExecutor(max_workers=2)
     future_left = executor.submit(media.write_video, left_video_path, left_imgs, fps=30)
-    future_right = executor.submit(media.write_video, right_video_path, right_imgs, fps=30)
+    future_right = executor.submit(
+        media.write_video, right_video_path, right_imgs, fps=30
+    )
     return future_left, future_right
+
 
 def init(args):
     # Initialize zed camera
@@ -100,7 +110,7 @@ def init(args):
     # Initialize yellow button
     button = Button()
 
-    return zed,  button
+    return zed, button
 
 
 def main(args):
@@ -109,20 +119,26 @@ def main(args):
     demo_idx = 0
     while True:
         print("DEMO ", demo_idx)
-        left_video_path, right_video_path, depth_path, cam_intrinsics_path = create_output_folder(args)
+        left_video_path, right_video_path, depth_path, cam_intrinsics_path = (
+            create_output_folder(args)
+        )
 
         # Get camera parameters
         camera_params, K_left, K_right = get_camera_params(zed)
         save_intrinsics(camera_params, save_path=cam_intrinsics_path)
 
         # Record video
-        left_imgs, right_imgs, depth_imgs = record_one_video(zed, camera_params, args, button)
+        left_imgs, right_imgs, depth_imgs = record_one_video(
+            zed, camera_params, args, button
+        )
 
         # Write videos (and wait for previous videos to finish writing)
         if future_left is not None:
             while not future_left.done():
                 time.sleep(1)
-        future_left, future_right = save_videos(left_video_path, right_video_path, left_imgs, right_imgs, args)
+        future_left, future_right = save_videos(
+            left_video_path, right_video_path, left_imgs, right_imgs, args
+        )
 
         # Save depth images
         np.save(depth_path, np.array(depth_imgs))
@@ -143,7 +159,13 @@ if __name__ == "__main__":
     parser.add_argument("--intrinsics", action="store_true")
     parser.add_argument("--use_nuc_ip", action="store_true")
     parser.add_argument("--camera_calib", action="store_true")
-    parser.add_argument("--depth_mode", required=True, choices=["PERFORMANCE", "ULTRA", "QUALITY", "NEURAL", "TRI", "NONE"])
-    parser.add_argument("--resolution", required=True, choices=["VGA", "HD720", "HD1080", "HD2K"])
+    parser.add_argument(
+        "--depth_mode",
+        required=True,
+        choices=["PERFORMANCE", "ULTRA", "QUALITY", "NEURAL", "TRI", "NONE"],
+    )
+    parser.add_argument(
+        "--resolution", required=True, choices=["VGA", "HD720", "HD1080", "HD2K"]
+    )
     args = parser.parse_args()
     main(args)

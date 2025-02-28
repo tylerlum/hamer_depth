@@ -1,20 +1,21 @@
 """
 Wrapper around DINO for object detection
 """
-import os
-import pdb
+
 import glob
-from tqdm import tqdm
-from typing import List, Tuple, Optional
-import numpy as np
+import os
+from typing import List, Optional, Tuple
 
-from transformers import pipeline
-from PIL import Image
-import mediapy as media
 import cv2
+import mediapy as media
+import numpy as np
+from PIL import Image
+from tqdm import tqdm
+from transformers import pipeline
 
-from human_shadow.utils.image_utils import DetectionResult
 from human_shadow.utils.file_utils import get_parent_folder_of_package
+from human_shadow.utils.image_utils import DetectionResult
+
 
 class DetectorDino:
     def __init__(self, detector_id: str):
@@ -25,9 +26,14 @@ class DetectorDino:
             batch_size=16,
         )
 
-
-    def get_bboxes(self, frame: np.ndarray, object_name: str, threshold: float = 0.4, 
-                   visualize: bool = False, pause_visualization: bool = True) -> Tuple[List[np.ndarray], List[np.float32]]:
+    def get_bboxes(
+        self,
+        frame: np.ndarray,
+        object_name: str,
+        threshold: float = 0.4,
+        visualize: bool = False,
+        pause_visualization: bool = True,
+    ) -> Tuple[List[np.ndarray], List[np.float32]]:
         img_pil = Image.fromarray(frame)
         labels = [f"{object_name}."]
         results = self.detector(img_pil, candidate_labels=labels, threshold=threshold)
@@ -48,14 +54,16 @@ class DetectorDino:
                     (0, 255, 0),
                     2,
                 )
-                cv2.putText(img_bgr,
-                            f"{score:.4f}",
-                            (int(bbox[0]), int(bbox[1])),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 255, 0),
-                            2,
-                            cv2.LINE_AA)
+                cv2.putText(
+                    img_bgr,
+                    f"{score:.4f}",
+                    (int(bbox[0]), int(bbox[1])),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2,
+                    cv2.LINE_AA,
+                )
             cv2.imshow("Detection", img_bgr)
             if pause_visualization:
                 cv2.waitKey(0)
@@ -63,9 +71,14 @@ class DetectorDino:
                 cv2.waitKey(1)
         return bboxes, scores
 
-
-    def get_best_bbox(self, frame: np.ndarray, object_name: str, threshold: float = 0.4, 
-               visualize: bool = False, pause_visualization: bool = True) -> Optional[np.ndarray]:
+    def get_best_bbox(
+        self,
+        frame: np.ndarray,
+        object_name: str,
+        threshold: float = 0.4,
+        visualize: bool = False,
+        pause_visualization: bool = True,
+    ) -> Optional[np.ndarray]:
         bboxes, scores = self.get_bboxes(frame, object_name, threshold)
         if len(bboxes) == 0:
             return None
@@ -82,22 +95,24 @@ class DetectorDino:
                 (0, 255, 0),
                 2,
             )
-            cv2.putText(img_bgr,
-                    f"{best_score:.4f}",
-                    (int(best_bbox[0]), int(best_bbox[1])),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 0),
-                    2,
-                    cv2.LINE_AA)
+            cv2.putText(
+                img_bgr,
+                f"{best_score:.4f}",
+                (int(best_bbox[0]), int(best_bbox[1])),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+                cv2.LINE_AA,
+            )
             cv2.imshow("Detection", img_bgr)
             if pause_visualization:
                 cv2.waitKey(0)
             else:
                 cv2.waitKey(1)
         return best_bbox
-    
-    
+
+
 if __name__ == "__main__":
     root_folder = get_parent_folder_of_package("human_shadow")
     detector_id = "IDEA-Research/grounding-dino-tiny"
@@ -109,10 +124,16 @@ if __name__ == "__main__":
     # detector.get_bboxes(left_imgs[0], "hand", visualize=True, visualize_wait=True)
     # pdb.set_trace()
 
-    image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg"))
-    image_paths = sorted(image_paths, key=lambda x: int(os.path.basename(x).split(".")[0]))
+    image_paths = glob.glob(
+        os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg")
+    )
+    image_paths = sorted(
+        image_paths, key=lambda x: int(os.path.basename(x).split(".")[0])
+    )
 
-    videos_folder = os.path.join(root_folder, "human_shadow/data/videos/demo_marion_calib_2/")
+    videos_folder = os.path.join(
+        root_folder, "human_shadow/data/videos/demo_marion_calib_2/"
+    )
     video_idx = 0
     video_folder = os.path.join(videos_folder, str(video_idx))
     video_path = os.path.join(video_folder, f"video_{video_idx}_L.mp4")

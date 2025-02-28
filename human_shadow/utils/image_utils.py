@@ -1,10 +1,7 @@
-import pdb 
-import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List, Optional
-import numpy as np
-import pdb
 
+import numpy as np
 
 
 @dataclass
@@ -39,19 +36,19 @@ class DetectionResult:
             ),
         )
 
+
 def resize_image_to_rectangle(img, target_height, target_width):
     """
     Resize an image to a rectangle shape with the target height and width.
     Set the image in the center of the rectangle and leave the rest as black.
     """
-    assert(img.shape[0] == target_height)
+    assert img.shape[0] == target_height
     if img.shape[0] == img.shape[1]:
         new_img = np.zeros((target_height, target_width, 3), dtype=np.uint8)
         dp = (target_width - target_height) // 2
-        new_img[:, dp:dp+target_height] = img
+        new_img[:, dp : dp + target_height] = img
         img = new_img
     return img, dp
-
 
 
 def resize_img_to_square(img: np.ndarray) -> np.ndarray:
@@ -61,8 +58,8 @@ def resize_img_to_square(img: np.ndarray) -> np.ndarray:
     min_dim = min(img_w, img_h)
     if img_w > min_dim:
         diff = img_w - min_dim
-        img = img[:, diff//2:diff//2+min_dim]
+        img = img[:, diff // 2 : diff // 2 + min_dim]
     elif img_h > min_dim:
         diff = img_h - min_dim
-        img = img[diff//2:diff//2+min_dim, :]
+        img = img[diff // 2 : diff // 2 + min_dim, :]
     return img

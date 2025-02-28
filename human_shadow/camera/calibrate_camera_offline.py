@@ -9,18 +9,17 @@ Modified from: https://github.com/facebookresearch/fairo/blob/main/perception/sa
 Top-level script for computing camera calibration given .pkl data file
 """
 
-import pdb
 import argparse
-import os
-import numpy as np
-import cv2
-import pickle
-import matplotlib.pyplot as plt
 import json
+import os
+import pickle
 from collections import namedtuple
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from scipy.spatial.transform import Rotation as R
-import pathlib
 
 import human_shadow.camera.calibration_utils as c_utils
 

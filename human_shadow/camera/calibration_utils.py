@@ -5,11 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 # From: https://github.com/facebookresearch/fairo/blob/main/perception/sandbox/eyehandcal/src/eyehandcal/utils.py
 
-import torch
+
 import cv2
-import math
 import numpy as np
-import pdb
+import torch
 
 
 def detect_corners(data, target_idx=0):

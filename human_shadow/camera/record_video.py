@@ -1,22 +1,20 @@
-import pdb 
-import json
 import argparse
 import os
-import time
 import re
-import curses
+import time
+
 import numpy as np
 
-import mediapy as media
 # import pygame
 # from pygame.locals import *
 import pyzed.sl as sl
 
-from human_shadow.utils.file_utils import get_parent_folder_of_package
 from human_shadow.camera.zed_utils import *
 from human_shadow.utils.button_utils import *
+from human_shadow.utils.file_utils import get_parent_folder_of_package
 
-def main(args): 
+
+def main(args):
     # Initialize zed camera
     zed = init_zed(args.resolution, args.depth_mode)
 
@@ -34,9 +32,11 @@ def main(args):
     img_right = sl.Mat(res.width, res.height, sl.MAT_TYPE.U8_C4)
     depth_img = sl.Mat(res.width, res.height, sl.MAT_TYPE.F32_C4)
 
-    # Create output folder 
+    # Create output folder
     project_folder = get_parent_folder_of_package("human_shadow")
-    save_folder = os.path.join(project_folder, "human_shadow/data", "videos", args.folder)
+    save_folder = os.path.join(
+        project_folder, "human_shadow/data", "videos", args.folder
+    )
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
     left_pattern = re.compile(r"video_(\d+)_L.mp4")
@@ -76,7 +76,9 @@ def main(args):
     while not button_pressed:
         start_time = time.time()
         if zed.grab() == sl.ERROR_CODE.SUCCESS:
-            img_left_rgb, img_right_rgb, depth_img_arr = capture_camera_data(zed, args.depth_mode, img_left, img_right, depth_img)
+            img_left_rgb, img_right_rgb, depth_img_arr = capture_camera_data(
+                zed, args.depth_mode, img_left, img_right, depth_img
+            )
             left_imgs.append(img_left_rgb.copy())
             right_imgs.append(img_right_rgb.copy())
             depth_imgs.append(depth_img_arr.copy())
@@ -119,7 +121,13 @@ if __name__ == "__main__":
     parser.add_argument("--intrinsics", action="store_true")
     parser.add_argument("--use_nuc_ip", action="store_true")
     parser.add_argument("--camera_calib", action="store_true")
-    parser.add_argument("--depth_mode", required=True, choices=["PERFORMANCE", "ULTRA", "QUALITY", "NEURAL", "TRI", "NONE"])
-    parser.add_argument("--resolution", required=True, choices=["VGA", "HD720", "HD1080", "HD2K"])
+    parser.add_argument(
+        "--depth_mode",
+        required=True,
+        choices=["PERFORMANCE", "ULTRA", "QUALITY", "NEURAL", "TRI", "NONE"],
+    )
+    parser.add_argument(
+        "--resolution", required=True, choices=["VGA", "HD720", "HD1080", "HD2K"]
+    )
     args = parser.parse_args()
     main(args)

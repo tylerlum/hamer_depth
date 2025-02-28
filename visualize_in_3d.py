@@ -1,12 +1,14 @@
 import os
+
 import numpy as np
-from PIL import Image
 import open3d as o3d
+from PIL import Image
+
 
 def get_intrinsics_from_json(json_path: str):
     """
     Reads the camera intrinsic matrix from a JSON file.
-    
+
     Parameters:
         json_path (str): Path to the JSON file containing the intrinsic matrix.
 
@@ -17,7 +19,10 @@ def get_intrinsics_from_json(json_path: str):
         camera_matrix = np.loadtxt(f)
     return camera_matrix
 
-def create_point_cloud(rgb_image, depth_image, intrinsics, depth_scale=1000.0, max_depth=5.0):
+
+def create_point_cloud(
+    rgb_image, depth_image, intrinsics, depth_scale=1000.0, max_depth=5.0
+):
     """
     Creates a point cloud from an RGB image and depth image using camera intrinsics.
 
@@ -63,13 +68,28 @@ def create_point_cloud(rgb_image, depth_image, intrinsics, depth_scale=1000.0, m
 
     return point_cloud
 
+
 if __name__ == "__main__":
     # Define paths
     demo_path = "/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/final_scene/plate_pivotrack"
-    rgb_paths = sorted([os.path.join(demo_path, 'rgb', file) for file in os.listdir(os.path.join(demo_path, 'rgb')) if file.lower().endswith('.jpg')])
-    depth_paths = sorted([os.path.join(demo_path, 'depth', file) for file in os.listdir(os.path.join(demo_path, 'depth')) if file.lower().endswith('.png')])
-    
-    cam_intrinsics_path = "/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/cam_K.txt"
+    rgb_paths = sorted(
+        [
+            os.path.join(demo_path, "rgb", file)
+            for file in os.listdir(os.path.join(demo_path, "rgb"))
+            if file.lower().endswith(".jpg")
+        ]
+    )
+    depth_paths = sorted(
+        [
+            os.path.join(demo_path, "depth", file)
+            for file in os.listdir(os.path.join(demo_path, "depth"))
+            if file.lower().endswith(".png")
+        ]
+    )
+
+    cam_intrinsics_path = (
+        "/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/cam_K.txt"
+    )
 
     # Load camera intrinsics
     intrinsics = get_intrinsics_from_json(cam_intrinsics_path)
@@ -86,21 +106,22 @@ if __name__ == "__main__":
     pcd = create_point_cloud(img_rgb, img_depth, intrinsics)
 
     # Create coordinate frame for visualization
-    coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5, origin=[0, 0, 0])
+    coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
+        size=0.5, origin=[0, 0, 0]
+    )
 
     # Set camera view to point toward Z-axis
     vis = o3d.visualization.Visualizer()
-    vis.create_window(window_name=f"Point Cloud")
+    vis.create_window(window_name="Point Cloud")
     vis.add_geometry(pcd)
     vis.add_geometry(coordinate_frame)
     view_control = vis.get_view_control()
     view_control.set_front([0, 0, -1])  # Camera pointing toward -Z
-    view_control.set_up([0, -1, 0])    # Camera up is -Y
-    view_control.set_lookat([0, 0, 0]) # Look at the origin
+    view_control.set_up([0, -1, 0])  # Camera up is -Y
+    view_control.set_lookat([0, 0, 0])  # Look at the origin
 
     vis.run()
     vis.destroy_window()
-
 
     # Visualize point cloud
     # o3d.visualization.draw_geometries([pcd], window_name=f"Point Cloud")

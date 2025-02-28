@@ -1,8 +1,7 @@
-import pdb
 import os
-import numpy as np
 
 import mediapy as media
+import numpy as np
 
 
 def convert_video_to_images(video_path: str, save_folder: str):

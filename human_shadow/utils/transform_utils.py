@@ -7,7 +7,6 @@ def transform_pts(pts: np.ndarray, T: np.ndarray) -> np.ndarray:
     return pts[:, :3]
 
 
-
 def transform_pt(pt: np.ndarray, T: np.ndarray) -> np.ndarray:
     pt = np.array(pt)
     pt = np.append(pt, 1)

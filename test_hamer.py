@@ -1,12 +1,14 @@
 import os
+
 import cv2
 
 from human_shadow.detectors.detector_hamer import DetectorHamer
 
-
 folder_path = "/juno/u/jyfang/human_shadow/human_shadow/data/rgb"
-imgs_rgb_L_paths = sorted([file for file in os.listdir(folder_path) if file.lower().endswith('.jpg')])
-imgs_rgb_L=[]
+imgs_rgb_L_paths = sorted(
+    [file for file in os.listdir(folder_path) if file.lower().endswith(".jpg")]
+)
+imgs_rgb_L = []
 for path in imgs_rgb_L_paths:
     full_path = os.path.join(folder_path, path)
     imgs_rgb_L.append(cv2.imread(full_path)[:, :, ::-1])

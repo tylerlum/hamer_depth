@@ -42,6 +42,6 @@ KEY_CAMERA_DEPTH_BIN = f"{APP_NAMESPACE}::camera::depth_bin"
 KEY_CAMERA_POINT_CLOUD_BIN = f"{APP_NAMESPACE}::camera::point_cloud_bin"
 
 
-# Hand detection 
+# Hand detection
 KEY_HAND_EE_POS = "hand::ee_pos"
 KEY_HAMER_IMAGE = "hand::hamer_image"
