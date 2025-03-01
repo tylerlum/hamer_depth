@@ -176,7 +176,9 @@ def get_initial_transformation_estimate(
     MAX_DIST = 0.5
     close_idxs = distances < MAX_DIST
 
-    filtered_visible_hamer_points_3d_depth = visible_hamer_points_3d_depth[valid_idxs & close_idxs]
+    filtered_visible_hamer_points_3d_depth = visible_hamer_points_3d_depth[
+        valid_idxs & close_idxs
+    ]
     filtered_visible_hamer_points_3d_inaccurate = visible_hamer_points_3d_inaccurate[
         valid_idxs & close_idxs
     ]
@@ -187,9 +189,9 @@ def get_initial_transformation_estimate(
     _, largest_cluster_indices = find_connected_clusters(
         filtered_visible_hamer_points_3d_depth, distance_threshold=0.05
     )
-    filtered_visible_hamer_points_3d_inaccurate = filtered_visible_hamer_points_3d_inaccurate[
-        largest_cluster_indices
-    ]
+    filtered_visible_hamer_points_3d_inaccurate = (
+        filtered_visible_hamer_points_3d_inaccurate[largest_cluster_indices]
+    )
     filtered_visible_hamer_points_3d_depth = filtered_visible_hamer_points_3d_depth[
         largest_cluster_indices
     ]
@@ -205,7 +207,11 @@ def get_initial_transformation_estimate(
 
     T_0 = np.eye(4)
     T_0[:3, 3] = translation
-    return T_0, filtered_visible_hamer_points_3d_depth, filtered_visible_hamer_points_3d_inaccurate
+    return (
+        T_0,
+        filtered_visible_hamer_points_3d_depth,
+        filtered_visible_hamer_points_3d_inaccurate,
+    )
 
 
 def get_transformation_estimate(
@@ -489,11 +495,18 @@ def process_image_with_hamer(
     )
     largest_cluster_valid_visible_hamer_pcd_inaccurate = get_pcd_from_points(
         valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices],
-        colors=np.ones_like(valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices]) * BLUE,
+        colors=np.ones_like(
+            valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices]
+        )
+        * BLUE,
     )
 
     # Make initial transformation estimate
-    T_0, filtered_visible_hamer_points_3d_depth, filtered_visible_hamer_points_3d_inaccurate = get_initial_transformation_estimate(
+    (
+        T_0,
+        filtered_visible_hamer_points_3d_depth,
+        filtered_visible_hamer_points_3d_inaccurate,
+    ) = get_initial_transformation_estimate(
         visible_hamer_points_3d_inaccurate=visible_hamer_points_3d_inaccurate,
         visible_hamer_points_3d_depth=visible_hamer_points_3d_depth,
     )
