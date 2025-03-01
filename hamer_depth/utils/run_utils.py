@@ -307,6 +307,7 @@ def process_image_with_hamer(
     mask: np.ndarray,
     cam_intrinsics: dict,
     detector_hamer: DetectorHamer,
+    debug: bool = False,
 ) -> Tuple[
     o3d.geometry.PointCloud,
     dict,
@@ -365,6 +366,50 @@ def process_image_with_hamer(
         visible_hamer_points_3d_depth=visible_hamer_points_3d_depth,
     )
 
+    # DEBUG
+    full_pcd = get_point_cloud_of_segmask(
+        mask=np.ones_like(mask),
+        depth_img=img_depth,
+        img=img_rgb,
+        intrinsics=cam_intrinsics,
+        visualize=False,
+    )
+    if debug:
+        # Create a visualizer
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
+        window_width, window_height = vis.get_view_control().get_window_size()
+
+
+        # Add point clouds to visualizer
+        vis.add_geometry(full_pcd)
+        vis.add_geometry(visible_hamer_pcd_inaccurate)
+
+        # Set camera
+
+        extrinsics = np.eye(4)
+        extrinsics[:3, 3] = np.array([0, 0, 0])  # origin
+        extrinsics[:3, 0] = np.array([1, 0, 0])  # X-right
+        extrinsics[:3, 1] = np.array([0, -1, 0])  # Y-down
+        extrinsics[:3, 2] = np.array([0, 0, 1])  # Z-forward
+        intrinsics = o3d.camera.PinholeCameraIntrinsic(
+            width=window_width,
+            height=window_height,
+            fx=cam_intrinsics["fx"],
+            fy=cam_intrinsics["fy"],
+            cx=cam_intrinsics["cx"],
+            cy=cam_intrinsics["cy"],
+        )
+        camera_params = o3d.camera.PinholeCameraParameters()
+        camera_params.intrinsic = intrinsics
+        camera_params.extrinsic = extrinsics
+        vis.get_view_control().convert_from_pinhole_camera_parameters(camera_params)
+
+        # Render and show
+        vis.run()
+        breakpoint()
+        vis.destroy_window()
+
     # Align the inaccurate hand point cloud with the masked hand point cloud
     T, aligned_hamer_pcd = get_transformation_estimate(
         visible_hamer_pcd_inaccurate=visible_hamer_pcd_inaccurate,
@@ -377,19 +422,6 @@ def process_image_with_hamer(
     hand_keypoints_dict, hand_keypoints_pcd = get_hand_keypoints(
         mesh=hand_mesh_accurate,
     )
-
-    # DEBUG
-    DEBUG = True
-    if DEBUG:
-        full_pcd = get_point_cloud_of_segmask(
-            mask=np.ones_like(mask),
-            depth_img=img_depth,
-            img=img_rgb,
-            intrinsics=cam_intrinsics,
-            visualize=False,
-        )
-        o3d.visualization.draw_geometries([full_pcd, aligned_hamer_pcd])
-        breakpoint()
 
     return (
         masked_hand_pcd,

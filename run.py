@@ -23,6 +23,9 @@ class Args:
     )
     """Path to save outputs to"""
 
+    debug: bool = False
+    """Whether to run in debug mode"""
+
     ignore_exceptions: bool = False
     """Whether to ignore exceptions and continue processing the next image"""
 
@@ -85,6 +88,7 @@ def main() -> None:
                     mask=mask,
                     cam_intrinsics=camera_intrinsics,
                     detector_hamer=detector_hamer,
+                    debug=args.debug,
                 )
             except Exception as e:
                 print(f"Ignoring the following exception and continuing: {e}")
@@ -105,6 +109,7 @@ def main() -> None:
                 mask=mask,
                 cam_intrinsics=camera_intrinsics,
                 detector_hamer=detector_hamer,
+                debug=args.debug,
             )
 
         # Output folder
