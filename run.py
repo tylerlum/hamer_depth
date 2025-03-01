@@ -1,8 +1,10 @@
-import argparse
+from datetime import datetime
+import tyro
 import copy
-import os
 from typing import Tuple
+from pathlib import Path
 
+from dataclasses import dataclass
 import cv2
 import networkx as nx
 import numpy as np
@@ -44,7 +46,7 @@ def transform_pts(pts: np.ndarray, T: np.ndarray) -> np.ndarray:
     return pts[:, :3]
 
 
-def convert_intrinsics_matrix_to_dict(camera_matrix):
+def convert_intrinsics_matrix_to_dict(camera_matrix: np.ndarray) -> dict:
     fx = camera_matrix[0, 0]
     fy = camera_matrix[1, 1]
     cx = camera_matrix[0, 2]
@@ -58,9 +60,13 @@ def convert_intrinsics_matrix_to_dict(camera_matrix):
     return intrinsics
 
 
-def get_intrinsics_from_json(json_path: str):
-    with open(json_path, "r") as f:
+def get_camera_matrix_from_file(file_path: Path) -> np.ndarray:
+    with open(file_path, "r") as f:
         camera_matrix = np.loadtxt(f)
+
+    assert camera_matrix.shape == (3, 3), (
+        f"Camera matrix shape {camera_matrix.shape} is not (3, 3)"
+    )
 
     return camera_matrix
 
@@ -301,51 +307,68 @@ def process_image_with_hamer(
     )
 
 
-def main(demo_path):
+@dataclass
+class Args:
+    data_path: Path
+    """Expects data_path/rgb, data_path/depth, data_path/hand_masks"""
+
+    cam_intrinsics_path: Path
+    """Path to 3x3 camera intrinsics txt file"""
+
+    out_path: Path = Path(__file__).parent / "outputs" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    """Path to save outputs to"""
+
+    ignore_exceptions: bool = False
+    """Whether to ignore exceptions and continue processing the next image"""
+
+
+def main() -> None:
+    args = tyro.cli(Args)
+    print("=" * 100)
+    print(args)
+    print("=" * 100)
+
+    rgb_paths = sorted(list((args.data_path / "rgb").glob("*.jpg")))
+    depth_paths = sorted(list((args.data_path / "depth").glob("*.png")))
+    mask_paths = sorted(list((args.data_path / "hand_masks").glob("*.png")))
+    assert len(rgb_paths) == len(depth_paths) == len(mask_paths), (
+        f"{len(rgb_paths)} rgb, {len(depth_paths)} depth, {len(mask_paths)} masks"
+    )
+    print(f"Processing {len(rgb_paths)} images")
+
     detector_hamer = DetectorHamer()
 
-    rgb_paths = sorted(
-        [
-            os.path.join(demo_path, "rgb", file)
-            for file in os.listdir(os.path.join(demo_path, "rgb"))
-            if file.lower().endswith(".jpg")
-        ]
-    )
-    depth_paths = sorted(
-        [
-            os.path.join(demo_path, "depth", file)
-            for file in os.listdir(os.path.join(demo_path, "depth"))
-        ]
-    )
-    mask_paths = sorted(
-        [
-            os.path.join(demo_path, "masks_hand2", file)
-            for file in os.listdir(os.path.join(demo_path, "masks_hand2"))
-        ]
-    )
-    assert len(rgb_paths) == len(depth_paths)
-    assert len(rgb_paths) == len(mask_paths)
-    cam_intrinsics_path = (
-        "/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/cam_K.txt"
-    )
-
     # Get intrinsics
-    camera_matrix = get_intrinsics_from_json(cam_intrinsics_path)
-    cam_intrinsics = convert_intrinsics_matrix_to_dict(camera_matrix)
+    camera_matrix = get_camera_matrix_from_file(args.cam_intrinsics_path)
+    camera_intrinsics = convert_intrinsics_matrix_to_dict(camera_matrix)
 
-    for i in tqdm(range(len(rgb_paths))):
-        idx = rgb_paths[i][-9:-4]
-        print(idx)
+    pbar = tqdm(zip(rgb_paths, depth_paths, mask_paths))
+    for rgb_path, depth_path, mask_path in pbar:
+        filename = rgb_path.stem
+        pbar.set_description(f"Processing {filename}")
 
         # Get data
-        img_rgb = np.array(Image.open(rgb_paths[i]))
-        img_depth = np.array(Image.open(depth_paths[i]))
-        mask = np.array(Image.open(mask_paths[i]))
+        img_rgb = np.array(Image.open(rgb_path))
+        img_depth = np.array(Image.open(depth_path))
+        mask = np.array(Image.open(mask_path))
 
-        # Adjust for size of images
-        img_w, img_h = img_rgb.shape[:2]
-
-        try:
+        if args.ignore_exceptions:
+            try:
+                (
+                    pcd,
+                    hamer_out,
+                    mesh,
+                    aligned_hamer_pcd,
+                    finger_pts,
+                    finger_pcd,
+                    transformed_mesh,
+                ) = process_image_with_hamer(
+                    img_rgb, img_depth, mask, camera_intrinsics, detector_hamer, vis=None
+                )
+            except Exception as e:
+                print(f"Ignoring the following exception and continuing: {e}")
+                continue
+        else:
             (
                 pcd,
                 hamer_out,
@@ -355,25 +378,21 @@ def main(demo_path):
                 finger_pcd,
                 transformed_mesh,
             ) = process_image_with_hamer(
-                img_rgb, img_depth, mask, cam_intrinsics, detector_hamer, vis=None
+                img_rgb, img_depth, mask, camera_intrinsics, detector_hamer, vis=None
             )
-        except Exception as e:
-            print(e)
-            continue
 
-        # Save data
-        out_path = demo_path.replace(
-            "/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/final_scene/",
-            "/juno/u/oliviayl/repos/cross_embodiment/human_shadow/outputs_depth_final_CLUSTER/",
-        )
-        print(out_path)
-        if not os.path.exists(os.path.join(out_path)):
-            os.makedirs(os.path.join(out_path))
-        transformed_mesh.export(os.path.join(out_path, f"{idx}.obj"))
-        cv2.imwrite(os.path.join(out_path, f"{idx}.png"), hamer_out["annotated_img"])
+        # Output folder
+        args.out_path.mkdir(parents=True, exist_ok=True)
+
+        # Output mesh
+        transformed_mesh.export(args.out_path / f"{filename}.obj")
+
+        # Output annotated image
+        cv2.imwrite(args.out_path / f"{filename}.png", hamer_out["annotated_img"])
+
+        # Output json
         joint_poses = hamer_out["kpts_3d"]
-        assert joint_poses.shape == (21, 3)
-
+        assert joint_poses.shape == (21, 3), f"{joint_poses.shape} != (21, 3)"
         joint_names = [
             "wrist_back",
             "wrist_front",
@@ -389,21 +408,12 @@ def main(demo_path):
             "thumb_3",
         ]
         frame_data = {}
-
         for j in joint_names:
             frame_data[j] = list(finger_pts[j])
         frame_data["global_orient"] = hamer_out["global_orient"].tolist()
-        with open(os.path.join(out_path, f"{idx}.json"), "w") as json_file:
+        with open(args.out_path / f"{filename}.json", "w") as json_file:
             json.dump(frame_data, json_file, indent=4)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--demo_path",
-        type=str,
-        default="/juno/u/oliviayl/repos/cross_embodiment/FoundationPose/demo_data/final_scene/plate_pivotrack",
-    )
-    args = parser.parse_args()
-
-    main(args.demo_path)
+    main()
