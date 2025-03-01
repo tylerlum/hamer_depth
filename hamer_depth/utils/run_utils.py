@@ -241,6 +241,7 @@ def get_transformation_estimate(
             aligned_hamer_pcd = copy.deepcopy(visible_hamer_pcd_inaccurate).transform(T)
     except:
         print("ICP failed, reverting to initial prediction")
+        raise
         T = T_0
         aligned_hamer_pcd = copy.deepcopy(visible_hamer_pcd_inaccurate).transform(T)
     return T, aligned_hamer_pcd

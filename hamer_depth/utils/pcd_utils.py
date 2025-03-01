@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+import copy
 import numpy as np
 import open3d as o3d
 import trimesh
@@ -80,7 +81,7 @@ def icp_registration(
 
     aligned_source_pcd = source_pcd.transform(result_icp.transformation)
 
-    return aligned_source_pcd, result_icp.transformation
+    return aligned_source_pcd, copy.deepcopy(result_icp.transformation)
 
 
 def get_visible_points(mesh, origin: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
