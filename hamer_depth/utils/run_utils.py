@@ -305,10 +305,13 @@ def visualize_geometries(
     height: int,
     cam_intrinsics: dict,
     geometries: List[o3d.geometry.Geometry],
+    rescale_factor: float = 2.0,
 ):
+    rescaled_width, rescaled_height = int(width * rescale_factor), int(height * rescale_factor)
+
     # Create a visualizer
     vis = o3d.visualization.Visualizer()
-    vis.create_window(width=width, height=height)
+    vis.create_window(width=rescaled_width, height=rescaled_height)
 
     # Add point clouds to visualizer
     for geom in geometries:
@@ -320,7 +323,7 @@ def visualize_geometries(
 
     # Update intrinsic matrix
     camera_params.intrinsic.set_intrinsics(
-        width=width, height=height,
+        width=rescaled_width, height=rescaled_height,
         fx=cam_intrinsics["fx"], fy=cam_intrinsics["fy"],
         cx=cam_intrinsics["cx"], cy=cam_intrinsics["cy"]
     )
@@ -431,27 +434,21 @@ def process_image_with_hamer(
     )
 
     if debug:
-        width, height = img_rgb.shape[1], img_rgb.shape[0]
-        RESCALE_FACTOR = 2.0
-        width, height = int(width * RESCALE_FACTOR), int(height * RESCALE_FACTOR)
-
         # Set colors
         RED, GREEN, BLUE, YELLOW = [0, 0, 1], [0, 1, 0], [1, 0, 0], [1, 1, 0]
         masked_hand_pcd.paint_uniform_color(RED)
-        hand_keypoints_pcd.paint_uniform_color(BLUE)
-        visible_hamer_pcd_inaccurate.paint_uniform_color(YELLOW)
-        aligned_hamer_pcd.paint_uniform_color(GREEN)
+        visible_hamer_pcd_inaccurate.paint_uniform_color(GREEN)
+        aligned_hamer_pcd.paint_uniform_color(BLUE)
 
         visualize_geometries(
-            width=width,
-            height=height,
+            width=img_rgb.shape[1],
+            height=img_rgb.shape[0],
             cam_intrinsics=cam_intrinsics,
             geometries=[
                 full_pcd,
+                masked_hand_pcd,
                 visible_hamer_pcd_inaccurate,
                 aligned_hamer_pcd,
-                hand_keypoints_pcd,
-                masked_hand_pcd,
             ],
         )
 
