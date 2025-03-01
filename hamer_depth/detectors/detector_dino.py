@@ -13,8 +13,8 @@ from PIL import Image
 from tqdm import tqdm
 from transformers import pipeline
 
-from human_shadow.utils.file_utils import get_parent_folder_of_package
-from human_shadow.utils.image_utils import DetectionResult
+from hamer_depth.utils.file_utils import get_parent_folder_of_package
+from hamer_depth.utils.image_utils import DetectionResult
 
 
 class DetectorDino:

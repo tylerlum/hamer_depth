@@ -14,7 +14,7 @@ from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 import json
 
-from human_shadow.detectors.detector_hamer import (
+from hamer_depth.detectors.detector_hamer import (
     INDEX_FINGER_VERTEX,
     INDEX_KNUCKLE_VERTEX_BACK,
     INDEX_KNUCKLE_VERTEX_FRONT,
@@ -29,7 +29,7 @@ from human_shadow.detectors.detector_hamer import (
     WRIST_VERTEX_FRONT,
     DetectorHamer,
 )
-from human_shadow.utils.pcd_utils import (
+from hamer_depth.utils.pcd_utils import (
     get_3D_points_from_pixels,
     get_pcd_from_points,
     get_point_cloud_of_segmask,

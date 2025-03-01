@@ -15,7 +15,7 @@ import requests
 from detectron2.config import LazyConfig
 from hamer.utils.utils_detectron2 import DefaultPredictor_Lazy
 
-from human_shadow.utils.file_utils import get_parent_folder_of_package
+from hamer_depth.utils.file_utils import get_parent_folder_of_package
 
 
 def download_detectron_ckpt(root_dir: str, ckpt_path: str) -> None:
