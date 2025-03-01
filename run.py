@@ -71,42 +71,47 @@ def main() -> None:
         if args.ignore_exceptions:
             try:
                 (
-                    pcd,
+                    _,
                     hamer_out,
-                    mesh,
-                    aligned_hamer_pcd,
-                    finger_pts,
-                    finger_pcd,
-                    transformed_mesh,
+                    _,
+                    _,
+                    hand_keypoints_dict,
+                    _,
+                    hand_mesh_accurate,
+                    _,
                 ) = process_image_with_hamer(
-                    img_rgb,
-                    img_depth,
-                    mask,
-                    camera_intrinsics,
-                    detector_hamer,
-                    vis=None,
+                    img_rgb=img_rgb,
+                    img_depth=img_depth,
+                    mask=mask,
+                    cam_intrinsics=camera_intrinsics,
+                    detector_hamer=detector_hamer,
                 )
             except Exception as e:
                 print(f"Ignoring the following exception and continuing: {e}")
                 continue
         else:
             (
-                pcd,
+                _,
                 hamer_out,
-                mesh,
-                aligned_hamer_pcd,
-                finger_pts,
-                finger_pcd,
-                transformed_mesh,
+                _,
+                _,
+                hand_keypoints_dict,
+                _,
+                hand_mesh_accurate,
+                _,
             ) = process_image_with_hamer(
-                img_rgb, img_depth, mask, camera_intrinsics, detector_hamer, vis=None
+                img_rgb=img_rgb,
+                img_depth=img_depth,
+                mask=mask,
+                cam_intrinsics=camera_intrinsics,
+                detector_hamer=detector_hamer,
             )
 
         # Output folder
         args.out_path.mkdir(parents=True, exist_ok=True)
 
         # Output mesh
-        transformed_mesh.export(args.out_path / f"{filename}.obj")
+        hand_mesh_accurate.export(args.out_path / f"{filename}.obj")
 
         # Output annotated image
         cv2.imwrite(args.out_path / f"{filename}.png", hamer_out["annotated_img"])
@@ -130,7 +135,7 @@ def main() -> None:
         ]
         frame_data = {}
         for j in joint_names:
-            frame_data[j] = list(finger_pts[j])
+            frame_data[j] = list(hand_keypoints_dict[j])
         frame_data["global_orient"] = hamer_out["global_orient"].tolist()
         with open(args.out_path / f"{filename}.json", "w") as json_file:
             json.dump(frame_data, json_file, indent=4)

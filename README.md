@@ -44,13 +44,19 @@ pip install -e .
 
 Other dependencies:
 ```
-pip install open3d mediapy transformers trimesh rtree tyro
+pip install open3d mediapy transformers trimesh rtree tyro ruff
 ```
 
 In order to visualize point clouds, you may need to set init_renderer: bool = False in HaMeR's hamer/model/hamer.py file to ensure that HaMeR's visualizer doesn't cause errors with our open3d visualizer. 
 
 ```
 python run.py TODO
+```
+
+To format the code, run:
+
+```
+ruff check --extend-select I --fix .; ruff format .
 ```
 
 Thanks to Marion Lepart and Jiaying Fang for writing most of this code!
