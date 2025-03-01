@@ -300,6 +300,7 @@ def get_hand_keypoints(
     }
     return hand_keypoints_dict, hand_keypoints_pcd
 
+
 def visualize_geometries(
     width: int,
     height: int,
@@ -307,7 +308,10 @@ def visualize_geometries(
     geometries: List[o3d.geometry.Geometry],
     rescale_factor: float = 2.0,
 ):
-    rescaled_width, rescaled_height = int(width * rescale_factor), int(height * rescale_factor)
+    rescaled_width, rescaled_height = (
+        int(width * rescale_factor),
+        int(height * rescale_factor),
+    )
 
     # Create a visualizer
     vis = o3d.visualization.Visualizer()
@@ -323,9 +327,12 @@ def visualize_geometries(
 
     # Update intrinsic matrix
     camera_params.intrinsic.set_intrinsics(
-        width=rescaled_width, height=rescaled_height,
-        fx=cam_intrinsics["fx"], fy=cam_intrinsics["fy"],
-        cx=cam_intrinsics["cx"], cy=cam_intrinsics["cy"]
+        width=rescaled_width,
+        height=rescaled_height,
+        fx=cam_intrinsics["fx"],
+        fy=cam_intrinsics["fy"],
+        cx=cam_intrinsics["cx"],
+        cy=cam_intrinsics["cy"],
     )
 
     # Set up camera extrinsics (camera at origin with Z forward and Y down)
@@ -337,13 +344,14 @@ def visualize_geometries(
     camera_params.extrinsic = extrinsics
 
     # Apply updated parameters
-    view_control.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
+    view_control.convert_from_pinhole_camera_parameters(
+        camera_params, allow_arbitrary=True
+    )
 
     # Render and show
     vis.run()
     breakpoint()
     vis.destroy_window()
-
 
 
 def process_image_with_hamer(
@@ -363,6 +371,14 @@ def process_image_with_hamer(
     trimesh.Trimesh,
     o3d.geometry.PointCloud,
 ]:
+    full_pcd = get_point_cloud_of_segmask(
+        mask=np.ones_like(mask),
+        depth_img=img_depth,
+        img=img_rgb,
+        intrinsics=cam_intrinsics,
+        visualize=False,
+    )
+
     # Get masked hand point cloud
     # These are accurate points in 3D space
     masked_hand_pcd = get_point_cloud_of_segmask(
@@ -405,19 +421,27 @@ def process_image_with_hamer(
         cam_intrinsics=cam_intrinsics,
     )
 
+    if debug:
+        # Set colors
+        RED, GREEN, BLUE = [1, 0, 0], [0, 1, 0], [0, 0, 1]
+        visible_hamer_pcd_inaccurate.paint_uniform_color(RED)
+        masked_hand_pcd.paint_uniform_color(GREEN)
+
+        visualize_geometries(
+            width=img_rgb.shape[1],
+            height=img_rgb.shape[0],
+            cam_intrinsics=cam_intrinsics,
+            geometries=[
+                full_pcd,
+                masked_hand_pcd,
+                visible_hamer_pcd_inaccurate,
+            ],
+        )
+
     # Make initial transformation estimate
     T_0 = get_initial_transformation_estimate(
         visible_hamer_points_3d_inaccurate=visible_hamer_points_3d_inaccurate,
         visible_hamer_points_3d_depth=visible_hamer_points_3d_depth,
-    )
-
-    # DEBUG
-    full_pcd = get_point_cloud_of_segmask(
-        mask=np.ones_like(mask),
-        depth_img=img_depth,
-        img=img_rgb,
-        intrinsics=cam_intrinsics,
-        visualize=False,
     )
 
     # Align the inaccurate hand point cloud with the masked hand point cloud
@@ -435,9 +459,9 @@ def process_image_with_hamer(
 
     if debug:
         # Set colors
-        RED, GREEN, BLUE, YELLOW = [0, 0, 1], [0, 1, 0], [1, 0, 0], [1, 1, 0]
-        masked_hand_pcd.paint_uniform_color(RED)
-        visible_hamer_pcd_inaccurate.paint_uniform_color(GREEN)
+        RED, GREEN, BLUE = [1, 0, 0], [0, 1, 0], [0, 0, 1]
+        visible_hamer_pcd_inaccurate.paint_uniform_color(RED)
+        masked_hand_pcd.paint_uniform_color(GREEN)
         aligned_hamer_pcd.paint_uniform_color(BLUE)
 
         visualize_geometries(
