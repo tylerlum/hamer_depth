@@ -449,58 +449,6 @@ def process_image_with_hamer(
             ],
         )
 
-    # Compute the distances from the points in the depth image to the hand center
-    hand_center = np.mean(visible_hamer_points_3d_inaccurate, axis=0)
-    distances = np.linalg.norm(
-        visible_hamer_points_3d_depth - hand_center[None], axis=1
-    )
-
-    # Filter out 0s and nans
-    valid_idxs = visible_hamer_points_3d_depth[:, 2] > 0 & ~np.isnan(
-        visible_hamer_points_3d_depth[:, 2]
-    )
-
-    # Filter out far away points (this assumes that the hamer inaccuracy is smaller than this distance)
-    MAX_DIST = 0.5
-    close_idxs = distances < MAX_DIST
-
-    print(f"Num total points: {visible_hamer_points_3d_depth.shape[0]}")
-    valid_visible_points_3d = visible_hamer_points_3d_depth[valid_idxs & close_idxs]
-    valid_visible_hamer_points_3d_inaccurate = visible_hamer_points_3d_inaccurate[
-        valid_idxs & close_idxs
-    ]
-    print(f"Num valid points: {valid_visible_points_3d.shape[0]}")
-
-    PURPLE = [1, 0, 1]
-    CYAN = [0, 1, 1]
-    valid_visible_pcd = get_pcd_from_points(
-        valid_visible_points_3d,
-        colors=np.ones_like(valid_visible_points_3d) * PURPLE,
-    )
-    valid_visible_hamer_pcd_inaccurate = get_pcd_from_points(
-        valid_visible_hamer_points_3d_inaccurate,
-        colors=np.ones_like(valid_visible_hamer_points_3d_inaccurate) * CYAN,
-    )
-
-    largest_cluster_points, largest_cluster_indices = find_connected_clusters(
-        valid_visible_points_3d, distance_threshold=0.05
-    )
-    print(f"Num largest cluster points: {largest_cluster_points.shape[0]}")
-
-    # Get the median distance between the hamer predicted points and the remaining depth image points
-    BLACK = [0, 0, 0]
-    largest_cluster_valid_visible_pcd = get_pcd_from_points(
-        valid_visible_points_3d[largest_cluster_indices],
-        colors=np.ones_like(valid_visible_points_3d[largest_cluster_indices]) * BLACK,
-    )
-    largest_cluster_valid_visible_hamer_pcd_inaccurate = get_pcd_from_points(
-        valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices],
-        colors=np.ones_like(
-            valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices]
-        )
-        * BLUE,
-    )
-
     # Make initial transformation estimate
     (
         T_0,
@@ -510,8 +458,6 @@ def process_image_with_hamer(
         visible_hamer_points_3d_inaccurate=visible_hamer_points_3d_inaccurate,
         visible_hamer_points_3d_depth=visible_hamer_points_3d_depth,
     )
-
-    initial_aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T_0)
 
     # Align the inaccurate hand point cloud with the masked hand point cloud
     T, aligned_hamer_pcd = get_transformation_estimate(
@@ -530,6 +476,20 @@ def process_image_with_hamer(
         # Set colors
         RED, GREEN, BLUE = [1, 0, 0], [0, 1, 0], [0, 0, 1]
         YELLOW = [1, 1, 0]
+
+        PURPLE = [1, 0, 1]
+        CYAN = [0, 1, 1]
+        BLACK = [0, 0, 0]
+        initial_aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T_0)
+        filtered_visible_hamer_pcd_inaccurate = get_pcd_from_points(
+            filtered_visible_hamer_points_3d_inaccurate,
+            colors=np.ones_like(filtered_visible_hamer_points_3d_inaccurate) * PURPLE,
+        )
+        filtered_visible_hamer_pcd_depth = get_pcd_from_points(
+            filtered_visible_hamer_points_3d_depth,
+            colors=np.ones_like(filtered_visible_hamer_points_3d_depth) * CYAN,
+        )
+
         visible_hamer_pcd_inaccurate.paint_uniform_color(RED)
         masked_hand_pcd.paint_uniform_color(GREEN)
         aligned_hamer_pcd.paint_uniform_color(BLUE)
@@ -540,15 +500,13 @@ def process_image_with_hamer(
             height=img_rgb.shape[0],
             cam_intrinsics=cam_intrinsics,
             geometries=[
-                # full_pcd,
+                full_pcd,
                 masked_hand_pcd,
-                # visible_hamer_pcd_inaccurate,
-                # aligned_hamer_pcd,
+                visible_hamer_pcd_inaccurate,
+                aligned_hamer_pcd,
                 initial_aligned_hamer_pcd,
-                valid_visible_pcd,
-                valid_visible_hamer_pcd_inaccurate,
-                largest_cluster_valid_visible_pcd,
-                largest_cluster_valid_visible_hamer_pcd_inaccurate,
+                filtered_visible_hamer_pcd_inaccurate,
+                filtered_visible_hamer_pcd_depth,
             ],
         )
         breakpoint()

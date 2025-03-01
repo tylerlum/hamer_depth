@@ -64,7 +64,7 @@ def icp_registration(
     source_pcd: o3d.geometry.PointCloud,
     target_pcd: o3d.geometry.PointCloud,
     init_transform: np.ndarray,
-    max_correspondence_distance: float = 0.3,  # TODO TUNE
+    max_correspondence_distance: float = 0.3,
 ) -> Tuple[o3d.geometry.PointCloud, np.ndarray]:
     """
     Register two point clouds using ICP algorithm.
