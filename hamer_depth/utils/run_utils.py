@@ -224,9 +224,8 @@ def get_transformation_estimate(
     """
     try:
         aligned_hamer_pcd, T = icp_registration(
-            copy.deepcopy(visible_hamer_pcd_inaccurate),
-            pcd,
-            voxel_size=0.005,
+            source_pcd=copy.deepcopy(visible_hamer_pcd_inaccurate),
+            target_pcd=pcd,
             init_transform=T_0,
         )
 
@@ -239,10 +238,11 @@ def get_transformation_estimate(
                 f"ICP result has too much rotation, reverting to initial prediction: T = {T}, roll_pitch_yaw = {roll_pitch_yaw}"
             )
             T = T_0
-            aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T)
+            aligned_hamer_pcd = copy.deepcopy(visible_hamer_pcd_inaccurate).transform(T)
     except:
         print("ICP failed, reverting to initial prediction")
-        return T_0, visible_hamer_pcd_inaccurate
+        T = T_0
+        aligned_hamer_pcd = copy.deepcopy(visible_hamer_pcd_inaccurate).transform(T)
     return T, aligned_hamer_pcd
 
 
@@ -479,7 +479,6 @@ def process_image_with_hamer(
 
         PURPLE = [1, 0, 1]
         CYAN = [0, 1, 1]
-        BLACK = [0, 0, 0]
         initial_aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T_0)
         filtered_visible_hamer_pcd_inaccurate = get_pcd_from_points(
             filtered_visible_hamer_points_3d_inaccurate,
