@@ -4,7 +4,6 @@ Wrapper around HaMeR for hand keypoint detection.
 Adapted from Zi-ang-Cao's code and original HaMeR code.
 """
 
-import glob
 import logging
 import os
 from enum import Enum
@@ -13,7 +12,6 @@ from typing import Optional, Tuple
 
 import cv2
 import matplotlib.pyplot as plt
-import mediapy as media
 import numpy as np
 import torch
 from hamer.configs import get_config
@@ -22,7 +20,6 @@ from hamer.models import DEFAULT_CHECKPOINT, HAMER
 from hamer.utils import recursive_to
 from hamer.utils.geometry import perspective_projection
 from hamer.utils.renderer import cam_crop_to_full
-from tqdm import tqdm
 from vitpose_model import ViTPoseModel
 from yacs.config import CfgNode as CN
 
@@ -771,40 +768,3 @@ class DetectorHamer:
 
         model = HAMER.load_from_checkpoint(checkpoint_path, strict=False, cfg=model_cfg)
         return model, model_cfg
-
-
-if __name__ == "__main__":
-    root_folder = get_parent_folder_of_package("human_shadow")
-
-    # Get camera intrinsics
-    # # camera_intrinsics_path = os.path.join(root_folder, "human_shadow/camera/intrinsics/camera_intrinsics_HD1080.json")
-    # camera_intrinsics_path = os.path.join(root_folder, "human_shadow/data/videos/demo_marion_calib_2/0/cam_intrinsics_0.json")
-    # camera_matrix = get_intrinsics_from_json(camera_intrinsics_path)
-    # camera_params = convert_intrinsics_matrix_to_dict(camera_matrix)
-    camera_params = None
-
-    detector = DetectorHamer()
-
-    image_paths = glob.glob(
-        os.path.join(
-            root_folder,
-            "human_shadow/data/videos/demo_marion_calib_2/0/video_0_L/*.jpg",
-        )
-    )
-    # image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg"))
-    image_paths = sorted(
-        image_paths, key=lambda x: int(os.path.basename(x).split(".")[0])
-    )
-
-    for idx, img_path in tqdm(enumerate(image_paths)):
-        print("Idx: ", idx)
-        img = media.read_image(img_path)
-
-        detector.detect_hand_keypoints(
-            img,
-            hand_type=HandType.LEFT,
-            visualize=True,
-            visualize_3d=False,
-            pause_visualization=False,
-            camera_params=camera_params,
-        )

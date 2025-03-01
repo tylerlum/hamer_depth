@@ -2,20 +2,16 @@
 Wrapper around detectron2 for object detection
 """
 
-import glob
 import os
 from pathlib import Path
 from typing import Tuple
 
 import cv2
 import hamer
-import mediapy as media
 import numpy as np
 import requests
 from detectron2.config import LazyConfig
 from hamer.utils.utils_detectron2 import DefaultPredictor_Lazy
-
-from hamer_depth.utils.file_utils import get_parent_folder_of_package
 
 
 def download_detectron_ckpt(root_dir: str, ckpt_path: str) -> None:
@@ -131,25 +127,3 @@ class DetectorDetectron2:
                 cv2.waitKey(1)
 
         return best_bbox, best_score
-
-
-if __name__ == "__main__":
-    root_folder = get_parent_folder_of_package("human_shadow")
-    detector = DetectorDetectron2(root_dir=root_folder)
-
-    image_paths = glob.glob(
-        os.path.join(
-            root_folder,
-            "human_shadow/data/videos/demo_marion_calib_2/0/video_0_L/*.jpg",
-        )
-    )
-    # image_paths = glob.glob(os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg"))
-    image_paths = sorted(
-        image_paths, key=lambda x: int(os.path.basename(x).split(".")[0])
-    )
-
-    for img_path in image_paths:
-        frame = media.read_image(img_path)
-
-        # detector.get_best_bbox(frame, visualize=True)
-        detector.get_bboxes(frame, visualize=True, visualize_wait=False)

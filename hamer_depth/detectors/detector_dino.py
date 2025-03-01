@@ -2,18 +2,13 @@
 Wrapper around DINO for object detection
 """
 
-import glob
-import os
 from typing import List, Optional, Tuple
 
 import cv2
-import mediapy as media
 import numpy as np
 from PIL import Image
-from tqdm import tqdm
 from transformers import pipeline
 
-from hamer_depth.utils.file_utils import get_parent_folder_of_package
 from hamer_depth.utils.image_utils import DetectionResult
 
 
@@ -111,58 +106,3 @@ class DetectorDino:
             else:
                 cv2.waitKey(1)
         return best_bbox
-
-
-if __name__ == "__main__":
-    root_folder = get_parent_folder_of_package("human_shadow")
-    detector_id = "IDEA-Research/grounding-dino-tiny"
-    detector_dino = DetectorDino(detector_id)
-
-    # video_folder = "/juno/u/lepertm/shadow/human_shadow/human_shadow/data/videos/demo_marion_calib/0"
-    # left_video_path = os.path.join(video_folder, f"video_0_L_preprocessed.mp4")
-    # left_imgs = np.array(media.read_video(left_video_path))
-    # detector.get_bboxes(left_imgs[0], "hand", visualize=True, visualize_wait=True)
-    # pdb.set_trace()
-
-    image_paths = glob.glob(
-        os.path.join(root_folder, "human_shadow/data/videos/demo1/video_0_L/*.jpg")
-    )
-    image_paths = sorted(
-        image_paths, key=lambda x: int(os.path.basename(x).split(".")[0])
-    )
-
-    videos_folder = os.path.join(
-        root_folder, "human_shadow/data/videos/demo_marion_calib_2/"
-    )
-    video_idx = 0
-    video_folder = os.path.join(videos_folder, str(video_idx))
-    video_path = os.path.join(video_folder, f"video_{video_idx}_L.mp4")
-    imgs_rgb = media.read_video(video_path)
-
-    for img_rgb in tqdm(imgs_rgb):
-        detector_dino.get_best_bbox(img_rgb, "hand", visualize=False)
-        # detector.get_bboxes(frame, "hand", threshold=0.2, visualize=True, pause_visualization=False)
-
-    # videos_folder = os.path.join(root_folder, "human_shadow/data/videos/demo_marion_calib_2/")
-    # video_idx = 0
-    # video_folder = os.path.join(videos_folder, str(video_idx))
-    # video_idx = 0
-    # video_path = os.path.join(video_folder, f"video_{video_idx}_L.mp4")
-    # imgs_rgb = media.read_video(video_path)
-
-    # detector_id = "IDEA-Research/grounding-dino-tiny"
-    # detector = pipeline(
-    #             model=detector_id,
-    #             task="zero-shot-object-detection",
-    #             device="cuda",
-    #             batch_size=16,
-    #         )
-
-    # batch_size = 16
-    # object_name = "hand"
-    # threshold=0.8
-    # labels = [f"{object_name}." for _ in range(batch_size)]
-    # images = [img for img in imgs_rgb[:batch_size]]
-    # results = detector(images, candidate_labels=labels, threshold=threshold)
-
-    # pdb.set_trace()

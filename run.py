@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -25,6 +26,9 @@ class Args:
 
     debug: bool = False
     """Whether to run in debug mode"""
+
+    debug_idx: Optional[int] = None
+    """Index of image to debug"""
 
     ignore_exceptions: bool = False
     """Whether to ignore exceptions and continue processing the next image"""

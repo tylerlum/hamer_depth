@@ -66,7 +66,7 @@ pip install -e .
 
 Other dependencies:
 ```
-pip install open3d mediapy transformers trimesh rtree tyro ruff
+pip install open3d transformers trimesh rtree tyro ruff
 ```
 
 ```
