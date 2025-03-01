@@ -38,7 +38,7 @@ def main() -> None:
 
     rgb_paths = sorted(list((args.data_path / "rgb").glob("*.jpg")))
     depth_paths = sorted(list((args.data_path / "depth").glob("*.png")))
-    mask_paths = sorted(list((args.data_path / "hand_masks").glob("*.png")))
+    mask_paths = sorted(list((args.data_path / "masks_hand2").glob("*.png")))
     assert len(rgb_paths) == len(depth_paths) == len(mask_paths), (
         f"{len(rgb_paths)} rgb, {len(depth_paths)} depth, {len(mask_paths)} masks"
     )
