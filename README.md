@@ -44,7 +44,7 @@ pip install -e .
 
 Other dependencies:
 ```
-pip install open3d
+pip install open3d mediapy transformers
 ```
 
 In order to visualize point clouds, you may need to set init_renderer: bool = False in HaMeR's hamer/model/hamer.py file to ensure that HaMeR's visualizer doesn't cause errors with our open3d visualizer. 

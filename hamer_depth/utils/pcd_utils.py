@@ -3,19 +3,7 @@ from typing import Optional, Tuple
 import numpy as np
 import open3d as o3d
 import trimesh
-from pycpd import RigidRegistration
 from sklearn.neighbors import NearestNeighbors
-
-
-def cpd_registration(
-    source_points: o3d.geometry.PointCloud, target_points: o3d.geometry.PointCloud
-) -> o3d.geometry.PointCloud:
-    """
-    Register two point clouds using Coherent Point Drift (CPD) algorithm.
-    """
-    reg = RigidRegistration(X=target_points, Y=source_points)
-    transformed_points, _ = reg.register()
-    return transformed_points
 
 
 def preprocess_point_cloud(
