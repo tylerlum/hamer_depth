@@ -1,6 +1,6 @@
 import copy
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple
 
 import networkx as nx
 import numpy as np
@@ -301,46 +301,6 @@ def get_hand_keypoints(
     return hand_keypoints_dict, hand_keypoints_pcd
 
 
-def visualize_geometries(
-    width: int,
-    height: int,
-    cam_intrinsics: dict,
-    geometries: List[o3d.geometry.Geometry],
-) -> None:
-    # Create a visualizer
-    vis = o3d.visualization.Visualizer()
-    for geometry in geometries:
-        vis.add_geometry(geometry)
-
-    vis.create_window(width=width, height=height)
-
-    # Get ViewControl and current camera parameters
-    view_control = vis.get_view_control()
-    camera_params = view_control.convert_to_pinhole_camera_parameters()
-
-    # Update intrinsic matrix
-    camera_params.intrinsic.set_intrinsics(
-        width=width, height=height,
-        fx=cam_intrinsics["fx"], fy=cam_intrinsics["fy"],
-        cx=cam_intrinsics["cx"], cy=cam_intrinsics["cy"]
-    )
-
-    # Set up camera extrinsics (camera at origin with Z forward and Y down)
-    extrinsics = np.eye(4)
-    extrinsics[:3, 3] = np.array([0, 0, 0])  # origin
-    extrinsics[:3, 0] = np.array([1, 0, 0])  # X-right
-    extrinsics[:3, 1] = np.array([0, 1, 0])  # Y-down
-    extrinsics[:3, 2] = np.array([0, 0, 1])  # Z-forward
-    camera_params.extrinsic = extrinsics
-
-    # Apply updated parameters
-    view_control.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
-
-    # Render and show
-    vis.run()
-    breakpoint()
-    vis.destroy_window()
-
 def process_image_with_hamer(
     img_rgb: np.ndarray,
     img_depth: np.ndarray,
@@ -429,33 +389,51 @@ def process_image_with_hamer(
     )
 
     if debug:
-        # Setting colors
-        RED, GREEN, BLUE, YELLOW = [0, 0, 1], [0, 1, 0], [1, 0, 0], [1, 1, 0]
-        masked_hand_pcd.paint_uniform_color(RED)
-        aligned_hamer_pcd.paint_uniform_color(GREEN)
-        hand_keypoints_pcd.paint_uniform_color(BLUE)
-        visible_hamer_pcd_inaccurate.paint_uniform_color(YELLOW)
-
-        geometries = [
-            full_pcd,
-            visible_hamer_pcd_inaccurate,
-            aligned_hamer_pcd,
-            hand_keypoints_pcd,
-            masked_hand_pcd,
-        ]
-
         # Create a visualizer
+        vis = o3d.visualization.Visualizer()
         width, height = img_rgb.shape[1], img_rgb.shape[0]
         RESCALE_FACTOR = 2.0
         rescaled_width, rescaled_height = int(width * RESCALE_FACTOR), int(height * RESCALE_FACTOR)
-        visualize_geometries(
-            width=rescaled_width,
-            height=rescaled_height,
-            cam_intrinsics=cam_intrinsics,
-            geometries=geometries,
+        vis.create_window(width=rescaled_width, height=rescaled_height)
+
+        # Set colors
+        RED, GREEN, BLUE = [0, 0, 1], [0, 1, 0], [1, 0, 0]
+        masked_hand_pcd.paint_uniform_color(RED)
+        aligned_hamer_pcd.paint_uniform_color(GREEN)
+        hand_keypoints_pcd.paint_uniform_color(BLUE)
+
+        visible_hamer_pcd_inaccurate.paint_uniform_color(GREEN)
+
+        # Add point clouds to visualizer
+        vis.add_geometry(full_pcd)
+        vis.add_geometry(visible_hamer_pcd_inaccurate)
+
+        # Get ViewControl and current camera parameters
+        view_control = vis.get_view_control()
+        camera_params = view_control.convert_to_pinhole_camera_parameters()
+
+        # Update intrinsic matrix
+        camera_params.intrinsic.set_intrinsics(
+            width=rescaled_width, height=rescaled_height,
+            fx=cam_intrinsics["fx"], fy=cam_intrinsics["fy"],
+            cx=cam_intrinsics["cx"], cy=cam_intrinsics["cy"]
         )
 
+        # Set up camera extrinsics (camera at origin with Z forward and Y down)
+        extrinsics = np.eye(4)
+        extrinsics[:3, 3] = np.array([0, 0, 0])  # origin
+        extrinsics[:3, 0] = np.array([1, 0, 0])  # X-right
+        extrinsics[:3, 1] = np.array([0, 1, 0])  # Y-down
+        extrinsics[:3, 2] = np.array([0, 0, 1])  # Z-forward
+        camera_params.extrinsic = extrinsics
 
+        # Apply updated parameters
+        view_control.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
+
+        # Render and show
+        vis.run()
+        breakpoint()
+        vis.destroy_window()
 
     return (
         masked_hand_pcd,
