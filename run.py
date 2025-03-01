@@ -13,8 +13,14 @@ from tqdm import tqdm
 
 @dataclass
 class Args:
-    data_path: Path
-    """Expects data_path to contain rgb, depth, hand_masks folder with the same number of images"""
+    rgb_path: Path
+    """Path to rgb images"""
+
+    depth_path: Path
+    """Path to depth images"""
+
+    mask_path: Path
+    """Path to hand masks"""
 
     cam_intrinsics_path: Path
     """Path to 3x3 camera intrinsics txt file"""
@@ -40,9 +46,9 @@ def main() -> None:
     print(args)
     print("=" * 100)
 
-    rgb_paths = sorted(list((args.data_path / "rgb").glob("*.jpg")))
-    depth_paths = sorted(list((args.data_path / "depth").glob("*.png")))
-    mask_paths = sorted(list((args.data_path / "masks_hand2").glob("*.png")))
+    rgb_paths = sorted(list((args.rgb_path).glob("*.jpg")))
+    depth_paths = sorted(list((args.depth_path).glob("*.png")))
+    mask_paths = sorted(list((args.mask_path).glob("*.png")))
     assert len(rgb_paths) == len(depth_paths) == len(mask_paths), (
         f"{len(rgb_paths)} rgb, {len(depth_paths)} depth, {len(mask_paths)} masks"
     )

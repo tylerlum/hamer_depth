@@ -136,7 +136,7 @@ def refine_3d_pts_with_depth(
 def get_initial_transformation_estimate(
     visible_hamer_points_3d_inaccurate: np.ndarray,
     visible_hamer_points_3d_depth: np.ndarray,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Estimate 4x4 transformation that will fix the hamer hand pose predictions:
 
@@ -176,22 +176,28 @@ def get_initial_transformation_estimate(
     MAX_DIST = 0.5
     close_idxs = distances < MAX_DIST
 
-    valid_visible_points_3d = visible_hamer_points_3d_depth[valid_idxs & close_idxs]
-    valid_visible_hamer_points_3d_inaccurate = visible_hamer_points_3d_inaccurate[
+    filtered_visible_hamer_points_3d_depth = visible_hamer_points_3d_depth[valid_idxs & close_idxs]
+    filtered_visible_hamer_points_3d_inaccurate = visible_hamer_points_3d_inaccurate[
         valid_idxs & close_idxs
     ]
 
     # From the depth image, we may still have points all over the place
     # E.g., if the mask is poor, it may include points from the background (very large depth)
     # Thus, we find the largest connected cluster of points and assume that is the hand
-    largest_cluster_points, largest_cluster_indices = find_connected_clusters(
-        valid_visible_points_3d, distance_threshold=0.05
+    _, largest_cluster_indices = find_connected_clusters(
+        filtered_visible_hamer_points_3d_depth, distance_threshold=0.05
     )
+    filtered_visible_hamer_points_3d_inaccurate = filtered_visible_hamer_points_3d_inaccurate[
+        largest_cluster_indices
+    ]
+    filtered_visible_hamer_points_3d_depth = filtered_visible_hamer_points_3d_depth[
+        largest_cluster_indices
+    ]
 
     # Get the median distance between the hamer predicted points and the remaining depth image points
     translation = np.nanmedian(
-        valid_visible_points_3d[largest_cluster_indices]
-        - valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices],
+        filtered_visible_hamer_points_3d_depth
+        - filtered_visible_hamer_points_3d_inaccurate,
         axis=0,
     )
 
@@ -199,7 +205,7 @@ def get_initial_transformation_estimate(
 
     T_0 = np.eye(4)
     T_0[:3, 3] = translation
-    return T_0
+    return T_0, filtered_visible_hamer_points_3d_depth, filtered_visible_hamer_points_3d_inaccurate
 
 
 def get_transformation_estimate(
@@ -229,7 +235,7 @@ def get_transformation_estimate(
             T = T_0
             aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T)
     except:
-        print("ICP failed")
+        print("ICP failed, reverting to initial prediction")
         return T_0, visible_hamer_pcd_inaccurate
     return T, aligned_hamer_pcd
 
@@ -350,7 +356,6 @@ def visualize_geometries(
 
     # Render and show
     vis.run()
-    breakpoint()
     vis.destroy_window()
 
 
@@ -438,11 +443,62 @@ def process_image_with_hamer(
             ],
         )
 
+    # Compute the distances from the points in the depth image to the hand center
+    hand_center = np.mean(visible_hamer_points_3d_inaccurate, axis=0)
+    distances = np.linalg.norm(
+        visible_hamer_points_3d_depth - hand_center[None], axis=1
+    )
+
+    # Filter out 0s and nans
+    valid_idxs = visible_hamer_points_3d_depth[:, 2] > 0 & ~np.isnan(
+        visible_hamer_points_3d_depth[:, 2]
+    )
+
+    # Filter out far away points (this assumes that the hamer inaccuracy is smaller than this distance)
+    MAX_DIST = 0.5
+    close_idxs = distances < MAX_DIST
+
+    print(f"Num total points: {visible_hamer_points_3d_depth.shape[0]}")
+    valid_visible_points_3d = visible_hamer_points_3d_depth[valid_idxs & close_idxs]
+    valid_visible_hamer_points_3d_inaccurate = visible_hamer_points_3d_inaccurate[
+        valid_idxs & close_idxs
+    ]
+    print(f"Num valid points: {valid_visible_points_3d.shape[0]}")
+
+    PURPLE = [1, 0, 1]
+    CYAN = [0, 1, 1]
+    valid_visible_pcd = get_pcd_from_points(
+        valid_visible_points_3d,
+        colors=np.ones_like(valid_visible_points_3d) * PURPLE,
+    )
+    valid_visible_hamer_pcd_inaccurate = get_pcd_from_points(
+        valid_visible_hamer_points_3d_inaccurate,
+        colors=np.ones_like(valid_visible_hamer_points_3d_inaccurate) * CYAN,
+    )
+
+    largest_cluster_points, largest_cluster_indices = find_connected_clusters(
+        valid_visible_points_3d, distance_threshold=0.05
+    )
+    print(f"Num largest cluster points: {largest_cluster_points.shape[0]}")
+
+    # Get the median distance between the hamer predicted points and the remaining depth image points
+    BLACK = [0, 0, 0]
+    largest_cluster_valid_visible_pcd = get_pcd_from_points(
+        valid_visible_points_3d[largest_cluster_indices],
+        colors=np.ones_like(valid_visible_points_3d[largest_cluster_indices]) * BLACK,
+    )
+    largest_cluster_valid_visible_hamer_pcd_inaccurate = get_pcd_from_points(
+        valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices],
+        colors=np.ones_like(valid_visible_hamer_points_3d_inaccurate[largest_cluster_indices]) * BLUE,
+    )
+
     # Make initial transformation estimate
-    T_0 = get_initial_transformation_estimate(
+    T_0, filtered_visible_hamer_points_3d_depth, filtered_visible_hamer_points_3d_inaccurate = get_initial_transformation_estimate(
         visible_hamer_points_3d_inaccurate=visible_hamer_points_3d_inaccurate,
         visible_hamer_points_3d_depth=visible_hamer_points_3d_depth,
     )
+
+    initial_aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T_0)
 
     # Align the inaccurate hand point cloud with the masked hand point cloud
     T, aligned_hamer_pcd = get_transformation_estimate(
@@ -460,21 +516,29 @@ def process_image_with_hamer(
     if debug:
         # Set colors
         RED, GREEN, BLUE = [1, 0, 0], [0, 1, 0], [0, 0, 1]
+        YELLOW = [1, 1, 0]
         visible_hamer_pcd_inaccurate.paint_uniform_color(RED)
         masked_hand_pcd.paint_uniform_color(GREEN)
         aligned_hamer_pcd.paint_uniform_color(BLUE)
+        initial_aligned_hamer_pcd.paint_uniform_color(YELLOW)
 
         visualize_geometries(
             width=img_rgb.shape[1],
             height=img_rgb.shape[0],
             cam_intrinsics=cam_intrinsics,
             geometries=[
-                full_pcd,
+                # full_pcd,
                 masked_hand_pcd,
-                visible_hamer_pcd_inaccurate,
-                aligned_hamer_pcd,
+                # visible_hamer_pcd_inaccurate,
+                # aligned_hamer_pcd,
+                initial_aligned_hamer_pcd,
+                valid_visible_pcd,
+                valid_visible_hamer_pcd_inaccurate,
+                largest_cluster_valid_visible_pcd,
+                largest_cluster_valid_visible_hamer_pcd_inaccurate,
             ],
         )
+        breakpoint()
 
     return (
         masked_hand_pcd,

@@ -63,23 +63,13 @@ def global_registration(
 def icp_registration(
     source_pcd: o3d.geometry.PointCloud,
     target_pcd: o3d.geometry.PointCloud,
-    voxel_size: float = 0.05,
-    use_global_registration: bool = True,
-    init_transform: Optional[np.ndarray] = None,
+    init_transform: np.ndarray,
+    max_correspondence_distance: float = 0.3,  # TODO TUNE
 ) -> Tuple[o3d.geometry.PointCloud, np.ndarray]:
     """
     Register two point clouds using ICP algorithm.
     """
-    # Optional global registration using RANSAC
-    if use_global_registration:
-        if init_transform is None:
-            result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
-            init_transform = result_ransac.transformation
-    else:
-        init_transform = np.eye(4)
-
     # Refine alignment using ICP
-    max_correspondence_distance = voxel_size * 5
     result_icp = o3d.pipelines.registration.registration_icp(
         source=source_pcd,
         target=target_pcd,
@@ -87,17 +77,6 @@ def icp_registration(
         init=init_transform,
         estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(),
     )
-
-    if np.array_equal(init_transform, result_icp.transformation):
-        result_ransac = global_registration(source_pcd, target_pcd, voxel_size)
-        init_transform = result_ransac.transformation
-        result_icp = o3d.pipelines.registration.registration_icp(
-            source=source_pcd,
-            target=target_pcd,
-            max_correspondence_distance=max_correspondence_distance,
-            init=init_transform,
-            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-        )
 
     aligned_source_pcd = source_pcd.transform(result_icp.transformation)
 
