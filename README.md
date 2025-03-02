@@ -50,8 +50,12 @@ Test that HaMeR works by running:
 
 ```
 python demo.py \
-    --img_folder example_data --out_folder demo_out \
-    --batch_size=48 --side_view --save_mesh --full_frame
+    --img_folder example_data \
+    --out_folder demo_out \
+    --batch_size=48 \
+    --side_view \
+    --save_mesh \
+    --full_frame
 ```
 
 ### This repo
@@ -69,8 +73,36 @@ Other dependencies:
 pip install open3d transformers trimesh rtree tyro ruff
 ```
 
+
+## Running
+
+First, download the demo data to data/demo/ to get:
+
 ```
-python run.py TODO
+data/demo
+├── cam_K.txt
+├── rgb
+│   ├── 000000.png
+│   ├── 000001.png
+│   ├── ...
+├── depth
+│   ├── 000000.png
+│   ├── 000001.png
+│   ├── ...
+├── hand_mask
+│   ├── 000000.png
+│   ├── 000001.png
+│   ├── ...
+```
+
+Then run:
+```
+python run.py \
+--rgb-path data/demo/rgb \
+--depth-path data/demo/depth \
+--mask-path data/demo/hand_mask \
+--cam-intrinsics-path data/demo/cam_K.txt \
+--out-path data/demo/hand_pose_trajectory
 ```
 
 To format the code, run:
