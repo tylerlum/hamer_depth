@@ -295,7 +295,7 @@ def get_hand_keypoints(
     )
     hand_keypoints = transform_pts(hand_keypoints, T)
     hand_keypoints_pcd = get_pcd_from_points(
-        hand_keypoints, colors=np.ones_like(hand_keypoints) * [1, 0, 0]
+        hand_keypoints
     )
     hand_keypoints_dict = {
         "wrist_back": hand_keypoints[0],
@@ -421,7 +421,6 @@ def process_image_with_hamer(
     )
     visible_hamer_pcd_inaccurate = get_pcd_from_points(
         visible_hamer_points_3d_inaccurate,
-        colors=np.ones_like(visible_hamer_points_3d_inaccurate) * [0, 1, 0],
     )
 
     # Refine the 3D points using the depth image
@@ -435,9 +434,9 @@ def process_image_with_hamer(
 
     if debug:
         # Set colors
-        RED, GREEN, BLUE = [1, 0, 0], [0, 1, 0], [0, 0, 1]
-        visible_hamer_pcd_inaccurate.paint_uniform_color(RED)
-        masked_hand_pcd.paint_uniform_color(GREEN)
+        RED, GREEN = [1, 0, 0], [0, 1, 0]
+        visible_hamer_pcd_inaccurate.paint_uniform_color(RED)  # Initial hamer points to refine
+        masked_hand_pcd.paint_uniform_color(GREEN)  # Real hand points to align to
 
         visualize_geometries(
             width=img_rgb.shape[1],
@@ -476,24 +475,22 @@ def process_image_with_hamer(
     if debug:
         # Set colors
         RED, GREEN, BLUE = [1, 0, 0], [0, 1, 0], [0, 0, 1]
-        YELLOW = [1, 1, 0]
+        visible_hamer_pcd_inaccurate.paint_uniform_color(RED)  # Initial hamer points to refine
+        masked_hand_pcd.paint_uniform_color(GREEN)  # Real hand points to align to
+        aligned_hamer_pcd.paint_uniform_color(BLUE)  # Final aligned hamer points
 
-        PURPLE = [1, 0, 1]
-        CYAN = [0, 1, 1]
         initial_aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T_0)
         filtered_visible_hamer_pcd_inaccurate = get_pcd_from_points(
             filtered_visible_hamer_points_3d_inaccurate,
-            colors=np.ones_like(filtered_visible_hamer_points_3d_inaccurate) * PURPLE,
         )
         filtered_visible_hamer_pcd_depth = get_pcd_from_points(
             filtered_visible_hamer_points_3d_depth,
-            colors=np.ones_like(filtered_visible_hamer_points_3d_depth) * CYAN,
         )
 
-        visible_hamer_pcd_inaccurate.paint_uniform_color(RED)
-        masked_hand_pcd.paint_uniform_color(GREEN)
-        aligned_hamer_pcd.paint_uniform_color(BLUE)
-        initial_aligned_hamer_pcd.paint_uniform_color(YELLOW)
+        YELLOW, MAGENTA, CYAN = [1, 1, 0], [1, 0, 1], [0, 1, 1]
+        initial_aligned_hamer_pcd.paint_uniform_color(YELLOW)  # Initial estimate of aligned hamer points
+        filtered_visible_hamer_pcd_inaccurate.paint_uniform_color(MAGENTA)  # Filtered initial hamer points (used to compute initial estimate)
+        filtered_visible_hamer_pcd_depth.paint_uniform_color(CYAN)  # Filtered hamer points refined with depth (used to compute initial estimate)
 
         visualize_geometries(
             width=img_rgb.shape[1],

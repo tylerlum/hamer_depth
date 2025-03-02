@@ -105,6 +105,30 @@ python run.py \
 --out-path data/demo/hand_pose_trajectory
 ```
 
+This results in:
+```
+data/demo/hand_pose_trajectory
+├── 00000.json
+├── 00000.obj
+├── 00000.png
+├── 00001.json
+├── 00001.obj
+├── 00001.png
+├── ...
+```
+
+To visualize the process in debug mode for a specific frame, run:
+```
+python run.py \
+--rgb-path data/demo/rgb \
+--depth-path data/demo/depth \
+--mask-path data/demo/hand_mask \
+--cam-intrinsics-path data/demo/cam_K.txt \
+--out-path data/demo/hand_pose_trajectory \
+--debug \
+--debug_idx 100
+```
+
 To format the code, run:
 
 ```
