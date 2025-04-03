@@ -38,8 +38,8 @@ class Args:
     debug: bool = False
     """Whether to run in debug mode"""
 
-    debug_idx: Optional[int] = None
-    """Index of image to debug"""
+    only_idx: Optional[int] = None
+    """Index of image to process, only process this image"""
 
     ignore_exceptions: bool = False
     """Whether to ignore exceptions and continue processing the next image"""
@@ -83,7 +83,7 @@ def main() -> None:
         dynamic_ncols=True,
     )
     for i, (rgb_path, depth_path, mask_path) in pbar:
-        if args.debug_idx is not None and i != args.debug_idx:
+        if args.only_idx is not None and i != args.only_idx:
             continue
 
         filename = rgb_path.stem
@@ -133,6 +133,7 @@ def main() -> None:
                 mask=mask,
                 cam_intrinsics=camera_intrinsics,
                 detector_hamer=detector_hamer,
+                hand_type=args.hand_type,
                 debug=args.debug,
             )
 
