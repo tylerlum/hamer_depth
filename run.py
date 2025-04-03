@@ -78,9 +78,14 @@ def main() -> None:
     camera_intrinsics = convert_intrinsics_matrix_to_dict(camera_matrix)
 
     pbar = tqdm(
-        zip(rgb_paths, depth_paths, mask_paths), total=num_images, dynamic_ncols=True
+        enumerate(zip(rgb_paths, depth_paths, mask_paths)),
+        total=num_images,
+        dynamic_ncols=True,
     )
-    for rgb_path, depth_path, mask_path in pbar:
+    for i, (rgb_path, depth_path, mask_path) in pbar:
+        if args.debug_idx is not None and i != args.debug_idx:
+            continue
+
         filename = rgb_path.stem
         pbar.set_description(f"Processing {filename}")
 

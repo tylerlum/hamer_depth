@@ -172,10 +172,14 @@ def get_initial_transformation_estimate(
     valid_idxs = visible_hamer_points_3d_depth[:, 2] > 0 & ~np.isnan(
         visible_hamer_points_3d_depth[:, 2]
     )
+    assert valid_idxs.any(), (
+        f"No valid points found: valid_idxs = {valid_idxs}, num_0 = {np.sum(visible_hamer_points_3d_depth[:, 2] == 0)}, num_nan = {np.sum(np.isnan(visible_hamer_points_3d_depth[:, 2]))}"
+    )
 
     # Filter out far away points (this assumes that the hamer inaccuracy is smaller than this distance)
     MAX_DIST = 0.5
     close_idxs = distances < MAX_DIST
+    assert close_idxs.any(), f"No close points found: distances = {distances}"
 
     filtered_visible_hamer_points_3d_depth = visible_hamer_points_3d_depth[
         valid_idxs & close_idxs
