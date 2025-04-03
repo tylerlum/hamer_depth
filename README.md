@@ -117,6 +117,17 @@ data/demo/hand_pose_trajectory
 ├── ...
 ```
 
+The script assumes the hands are right hands. If you want to process left hands, run:
+```
+python run.py \
+--rgb-path data/demo/rgb \
+--depth-path data/demo/depth \
+--mask-path data/demo/hand_mask \
+--cam-intrinsics-path data/demo/cam_K.txt \
+--out-path data/demo/hand_pose_trajectory \
+--hand-type LEFT
+```
+
 To visualize the process in debug mode for a specific frame, run:
 ```
 python run.py \
@@ -126,7 +137,19 @@ python run.py \
 --cam-intrinsics-path data/demo/cam_K.txt \
 --out-path data/demo/hand_pose_trajectory \
 --debug \
---debug_idx 100
+--only-idx 100
+```
+
+The script may crash if no hand is detected (e.g., if the hand mask is empty because it is occluded). To run the script without crashing (will just skip the bad frames), run:
+
+```
+python run.py \
+--rgb-path data/demo/rgb \
+--depth-path data/demo/depth \
+--mask-path data/demo/hand_mask \
+--cam-intrinsics-path data/demo/cam_K.txt \
+--out-path data/demo/hand_pose_trajectory \
+--ignore-exceptions
 ```
 
 To format the code, run:
