@@ -415,8 +415,16 @@ def process_image_with_hamer(
     )
     if hamer_out is None or not hamer_out.get("success", False):
         raise ValueError("No hand detected in image")
+
+    if hand_type == HandType.RIGHT:
+        faces = detector_hamer.faces_right.copy()
+    elif hand_type == HandType.LEFT:
+        faces = detector_hamer.faces_left.copy()
+    else:
+        raise ValueError(f"Invalid hand type: {hand_type}")
+
     hand_mesh_inaccurate = trimesh.Trimesh(
-        hamer_out["verts"].copy(), detector_hamer.faces_right.copy()
+        hamer_out["verts"].copy(), faces
     )
 
     # Figure out which hamer points are visible from the camera

@@ -111,7 +111,7 @@ class DetectorHamer:
                 out = self.model(batch)
 
             batch_T_cam_pred_all = DetectorHamer.get_all_T_cam_pred(
-                batch, out, scaled_focal_length
+                batch=batch, out=out, scaled_focal_length=scaled_focal_length
             )
             for idx in range(len(batch_T_cam_pred_all)):
                 kpts_3d = (
@@ -129,7 +129,7 @@ class DetectorHamer:
                 if hand_type == HandType.LEFT:
                     kpts_3d, verts = (
                         DetectorHamer.convert_right_hand_keypoints_to_left_hand(
-                            kpts_3d, verts
+                            kpts=kpts_3d, verts=verts
                         )
                     )
 
@@ -138,12 +138,12 @@ class DetectorHamer:
                 img_w, img_h = batch["img_size"][idx].float()
 
                 kpts_2d_hamer = DetectorHamer.project_3d_kpt_to_2d(
-                    kpts_3d,
-                    img_w,
-                    img_h,
-                    scaled_focal_length,
-                    camera_center,
-                    T_cam_pred,
+                    kpts_3d=kpts_3d,
+                    img_w=img_w,
+                    img_h=img_h,
+                    scaled_focal_length=scaled_focal_length,
+                    camera_center=camera_center,
+                    T_cam=T_cam_pred,
                 )
 
                 T_cam_pred = T_cam_pred.cpu().numpy()
@@ -281,7 +281,7 @@ class DetectorHamer:
         for bbox in bboxes:
             sam_bbox = sam_bboxes[0]
             if calculate_iou(np.array(bbox), np.array(sam_bbox)) > 0.1:
-                return np.array([bbox]), np.array([True]), debug_bboxes
+                return np.array([bbox]), np.array([hand_type == HandType.RIGHT]), debug_bboxes
 
         # Worst case, always use SAM
         bboxes = sam_bboxes
@@ -489,11 +489,13 @@ class DetectorHamer:
         # NOTE: FOR HaMeR, they are using the img_size as (W, H)
         W_H_shapes = batch["img_size"].float()
 
-        multiplier = 2 * batch["right"] - 1
-
         # Get cam_t to full image (instead of bbox)
         T_cam_pred_all = cam_crop_to_full(
-            pred_cam, box_center, box_size, W_H_shapes, scaled_focal_length
+            cam_bbox=pred_cam,
+            box_center=box_center,
+            box_size=box_size,
+            img_size=W_H_shapes,
+            focal_length=scaled_focal_length,
         )
 
         return T_cam_pred_all
