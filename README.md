@@ -95,6 +95,31 @@ data/demo
 │   ├── ...
 ```
 
+Run script help info:
+```
+python thirdparty/hamer_depth/run.py --help
+usage: run.py [-h] [OPTIONS]
+
+╭─ options ────────────────────────────────────────────────────────────────────────────────────────╮
+│ -h, --help              show this help message and exit                                          │
+│ --rgb-path PATH         Path to rgb images (required)                                            │
+│ --depth-path PATH       Path to depth images (required)                                          │
+│ --mask-path PATH        Path to hand masks (required)                                            │
+│ --cam-intrinsics-path PATH                                                                       │
+│                         Path to 3x3 camera intrinsics txt file (required)                        │
+│ --out-path PATH         Path to save outputs to (default:                                        │
+│                         thirdparty/hamer_depth/outputs/2025-04-02_21-37-10)                      │
+│ --hand-type {LEFT,RIGHT}                                                                         │
+│                         Type of hand to process (default: RIGHT)                                 │
+│ --debug, --no-debug     Whether to run in debug mode (default: False)                            │
+│ --only-idx {None}|INT   Index of image to process, only process this image (default: None)       │
+│ --ignore-exceptions, --no-ignore-exceptions                                                      │
+│                         Whether to ignore exceptions and continue processing the next image      │
+│                         (default: False)                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+
 Then run:
 ```
 python run.py \
