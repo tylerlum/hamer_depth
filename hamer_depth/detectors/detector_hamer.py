@@ -45,6 +45,43 @@ WRIST_VERTEX_BACK = 279
 WRIST_VERTEX_FRONT = 118
 
 
+def calculate_iou(bbox1: np.ndarray, bbox2: np.ndarray) -> float:
+    """
+    Calculate the Intersection over Union (IOU) between two bounding boxes.
+
+    Args:
+        bbox1: numpy array of shape (4,) with [min_x, min_y, max_x, max_y]
+        bbox2: numpy array of shape (4,) with [min_x, min_y, max_x, max_y]
+
+    Returns:
+        float: IOU score between 0 and 1
+    """
+    # Get intersection rectangle coordinates
+    x_left = max(bbox1[0], bbox2[0])
+    y_top = max(bbox1[1], bbox2[1])
+    x_right = min(bbox1[2], bbox2[2])
+    y_bottom = min(bbox1[3], bbox2[3])
+
+    # Check if there is no intersection
+    if x_right < x_left or y_bottom < y_top:
+        return 0.0
+
+    # Calculate intersection area
+    intersection_area = (x_right - x_left) * (y_bottom - y_top)
+
+    # Calculate areas of both bounding boxes
+    bbox1_area = (bbox1[2] - bbox1[0]) * (bbox1[3] - bbox1[1])
+    bbox2_area = (bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1])
+
+    # Calculate union area
+    union_area = bbox1_area + bbox2_area - intersection_area
+
+    # Calculate IOU
+    iou = intersection_area / union_area
+
+    return iou
+
+
 class DetectorHamer:
     def __init__(self):
         root_dir = get_parent_folder_of_package("hamer")
@@ -221,72 +258,41 @@ class DetectorHamer:
         assert hand_type in [HandType.LEFT, HandType.RIGHT], (
             f"Invalid hand type: {hand_type}"
         )
+        is_right = np.array([hand_type == HandType.RIGHT])
 
-        # Get initial bounding boxes
-        bboxes, scores, debug_bboxes = self.get_bboxes(
+        # Get dino bounding boxes
+        dino_bboxes, _dino_scores, debug_bboxes = self.get_bboxes(
             img, use_dino=True, use_detectron=False
         )  # Turned detectron off cuz bad
 
+        # Get sam bounding boxes
         y_indices, x_indices = np.where(img_mask[:, :, 0])
-        # Get min/max coordinates
         min_x = max(x_indices.min() - 5, 0)
         max_x = min(x_indices.max() + 5, img.shape[1] - 1)
         min_y = max(y_indices.min() - 5, 0)
         max_y = min(y_indices.max() + 5, img.shape[0] - 1)
-
         sam_bboxes = np.array([[min_x, min_y, max_x, max_y]])
+
         debug_bboxes["sam_bboxes"] = (sam_bboxes, np.array([1.0]))
-        if bboxes.size == 0:
+
+        if dino_bboxes.size == 0:
+            # If no DINO bounding boxes, use SAM
             print("Dino and Detectron failed - using SAM")
-            bboxes = sam_bboxes
-            is_right = np.array([hand_type == HandType.RIGHT])
-            return bboxes, is_right, debug_bboxes
+            return sam_bboxes, is_right, debug_bboxes
 
-        def calculate_iou(bbox1, bbox2):
-            """
-            Calculate the Intersection over Union (IOU) between two bounding boxes.
+        # Get the dino bounding box that has the highest IOU with the SAM bounding box
+        ious = [
+            calculate_iou(np.array(bbox), np.array(sam_bboxes[0]))
+            for bbox in dino_bboxes
+        ]
+        max_iou_idx = np.argmax(ious)
+        max_iou = ious[max_iou_idx]
+        if max_iou < 0.1:
+            # No good IOU, use SAM
+            return sam_bboxes, is_right, debug_bboxes
 
-            Args:
-                bbox1: numpy array of shape (4,) with [min_x, min_y, max_x, max_y]
-                bbox2: numpy array of shape (4,) with [min_x, min_y, max_x, max_y]
-
-            Returns:
-                float: IOU score between 0 and 1
-            """
-            # Get intersection rectangle coordinates
-            x_left = max(bbox1[0], bbox2[0])
-            y_top = max(bbox1[1], bbox2[1])
-            x_right = min(bbox1[2], bbox2[2])
-            y_bottom = min(bbox1[3], bbox2[3])
-
-            # Check if there is no intersection
-            if x_right < x_left or y_bottom < y_top:
-                return 0.0
-
-            # Calculate intersection area
-            intersection_area = (x_right - x_left) * (y_bottom - y_top)
-
-            # Calculate areas of both bounding boxes
-            bbox1_area = (bbox1[2] - bbox1[0]) * (bbox1[3] - bbox1[1])
-            bbox2_area = (bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1])
-
-            # Calculate union area
-            union_area = bbox1_area + bbox2_area - intersection_area
-
-            # Calculate IOU
-            iou = intersection_area / union_area
-
-            return iou
-
-        for bbox in bboxes:
-            sam_bbox = sam_bboxes[0]
-            if calculate_iou(np.array(bbox), np.array(sam_bbox)) > 0.1:
-                return np.array([bbox]), np.array([hand_type == HandType.RIGHT]), debug_bboxes
-
-        # Worst case, always use SAM
-        bboxes = sam_bboxes
-        is_right = np.array([hand_type == HandType.RIGHT])
-        return bboxes, is_right, debug_bboxes
+        # Good IOU, use DINO bounding box with max IOU with SAM
+        return np.array([dino_bboxes[max_iou_idx]]), is_right, debug_bboxes
 
     def get_bboxes(
         self,

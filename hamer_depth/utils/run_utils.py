@@ -423,9 +423,7 @@ def process_image_with_hamer(
     else:
         raise ValueError(f"Invalid hand type: {hand_type}")
 
-    hand_mesh_inaccurate = trimesh.Trimesh(
-        hamer_out["verts"].copy(), faces
-    )
+    hand_mesh_inaccurate = trimesh.Trimesh(hamer_out["verts"].copy(), faces)
 
     # Figure out which hamer points are visible from the camera
     # These are inaccurate points in 3D space
