@@ -1,6 +1,6 @@
+import copy
 from typing import Optional, Tuple
 
-import copy
 import numpy as np
 import open3d as o3d
 import trimesh

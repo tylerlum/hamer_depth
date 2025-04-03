@@ -52,7 +52,8 @@ def main() -> None:
     assert len(rgb_paths) == len(depth_paths) == len(mask_paths), (
         f"{len(rgb_paths)} rgb, {len(depth_paths)} depth, {len(mask_paths)} masks"
     )
-    print(f"Processing {len(rgb_paths)} images")
+    num_images = len(rgb_paths)
+    print(f"Processing {num_images} images")
 
     # Put these imports here to avoid heavy import at the top
     # As this makes --help slow and ugly
@@ -71,7 +72,9 @@ def main() -> None:
     camera_matrix = get_camera_matrix_from_file(args.cam_intrinsics_path)
     camera_intrinsics = convert_intrinsics_matrix_to_dict(camera_matrix)
 
-    pbar = tqdm(zip(rgb_paths, depth_paths, mask_paths))
+    pbar = tqdm(
+        zip(rgb_paths, depth_paths, mask_paths), total=num_images, dynamic_ncols=True
+    )
     for rgb_path, depth_path, mask_path in pbar:
         filename = rgb_path.stem
         pbar.set_description(f"Processing {filename}")
