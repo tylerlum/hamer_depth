@@ -24,6 +24,7 @@ from hamer_depth.detectors.detector_hamer import (
     WRIST_VERTEX_FRONT,
     DetectorHamer,
 )
+from hamer_depth.utils.hand_type import HandType
 from hamer_depth.utils.pcd_utils import (
     get_3D_points_from_pixels,
     get_pcd_from_points,
@@ -370,6 +371,7 @@ def process_image_with_hamer(
     mask: np.ndarray,
     cam_intrinsics: dict,
     detector_hamer: DetectorHamer,
+    hand_type: HandType = HandType.RIGHT,
     debug: bool = False,
 ) -> Tuple[
     o3d.geometry.PointCloud,
@@ -405,6 +407,7 @@ def process_image_with_hamer(
         img=img_rgb,
         img_mask=mask,
         camera_params=cam_intrinsics,
+        hand_type=hand_type,
     )
     if hamer_out is None or not hamer_out.get("success", False):
         raise ValueError("No hand detected in image")

@@ -6,7 +6,6 @@ Adapted from Zi-ang-Cao's code and original HaMeR code.
 
 import logging
 import os
-from enum import Enum
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -26,14 +25,10 @@ from yacs.config import CfgNode as CN
 from hamer_depth.detectors.detector_detectron2 import DetectorDetectron2
 from hamer_depth.detectors.detector_dino import DetectorDino
 from hamer_depth.utils.file_utils import get_parent_folder_of_package
+from hamer_depth.utils.hand_type import HandType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-class HandType(Enum):
-    LEFT = "left"
-    RIGHT = "right"
 
 
 THUMB_VERTEX = 744
@@ -78,7 +73,6 @@ class DetectorHamer:
         visualize: bool = False,
         visualize_3d: bool = False,
         pause_visualization: bool = True,
-        use_vitposes: bool = False,
         hand_type: HandType = HandType.RIGHT,
         camera_params: Optional[dict] = None,
     ) -> Optional[dict]:
@@ -86,7 +80,7 @@ class DetectorHamer:
         Detect the hand keypoints in the image.
         """
         bboxes, is_right, debug_bboxes = self.get_bboxes_for_hamer(
-            img, img_mask, hand_type=hand_type, use_vitposes=use_vitposes
+            img, img_mask, hand_type=hand_type
         )
         scaled_focal_length, camera_center = self.get_image_params(img, camera_params)
 
@@ -214,14 +208,17 @@ class DetectorHamer:
         img: np.ndarray,
         img_mask: np.ndarray,
         hand_type: HandType,
-        use_vitposes: bool = True,
     ) -> Tuple[np.ndarray, np.ndarray, dict]:
         """
         Get bounding boxes of the hands in the image for HaMeR.
         """
+        assert hand_type in [HandType.LEFT, HandType.RIGHT], (
+            f"Invalid hand type: {hand_type}"
+        )
+
         # Get initial bounding boxes
         bboxes, scores, debug_bboxes = self.get_bboxes(
-            img
+            img, use_dino=True, use_detectron=False
         )  # Turned detectron off cuz bad
 
         y_indices, x_indices = np.where(img_mask[:, :, 0])
@@ -234,10 +231,9 @@ class DetectorHamer:
         sam_bboxes = np.array([[min_x, min_y, max_x, max_y]])
         debug_bboxes["sam_bboxes"] = (sam_bboxes, np.array([1.0]))
         if bboxes.size == 0:
-            # raise ValueError("No bounding boxes found")
             print("Dino and Detectron failed - using SAM")
             bboxes = sam_bboxes
-            is_right = np.array([True])
+            is_right = np.array([hand_type == HandType.RIGHT])
             return bboxes, is_right, debug_bboxes
 
         def calculate_iou(bbox1, bbox2):
@@ -283,45 +279,8 @@ class DetectorHamer:
 
         # Worst case, always use SAM
         bboxes = sam_bboxes
-        is_right = np.array([True])
+        is_right = np.array([hand_type == HandType.RIGHT])
         return bboxes, is_right, debug_bboxes
-
-        raise ValueError("No bounding boxes found with IOU > 0.5")
-        if not use_vitposes:
-            is_right = self._assign_hand_type(bboxes, hand_type)
-            return bboxes, is_right, debug_bboxes
-
-        # Refine the bounding boxes with vitposes to identify the hand type
-        vitposes_out = self.get_human_vitposes(img, bboxes, scores)
-        refined_bboxes, is_right = DetectorHamer.refine_bboxes(vitposes_out)
-        debug_bboxes["refined_bboxes"] = refined_bboxes
-
-        if refined_bboxes.size == 0:
-            if use_vitposes:
-                raise ValueError("Vitposes did not return any bounding boxes")
-            else:
-                logger.debug("Warning: Vitposes did not return any bounding boxes")
-                is_right = self._assign_hand_type(bboxes, hand_type)
-                return bboxes, is_right, debug_bboxes
-
-        # Filter the bounding boxes by hand type
-        filtered_bboxes, is_right = DetectorHamer._filter_bboxes_by_hand(
-            refined_bboxes, is_right, hand_type
-        )
-        debug_bboxes["filtered_bboxes"] = filtered_bboxes
-        if filtered_bboxes.size == 0:
-            if use_vitposes:
-                raise ValueError(
-                    "Vitposes did not return any bounding boxes of the correct hand"
-                )
-            else:
-                logger.debug(
-                    "Warning: Vitposes did not return any bounding boxes of the correct hand"
-                )
-                is_right = self._assign_hand_type(bboxes, hand_type)
-                return bboxes, is_right, debug_bboxes
-
-        return filtered_bboxes, is_right, debug_bboxes
 
     def get_bboxes(
         self,

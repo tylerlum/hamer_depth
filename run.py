@@ -10,6 +10,8 @@ import tyro
 from PIL import Image
 from tqdm import tqdm
 
+from hamer_depth.utils.hand_type import HandType
+
 
 @dataclass
 class Args:
@@ -29,6 +31,9 @@ class Args:
         Path(__file__).parent / "outputs" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     )
     """Path to save outputs to"""
+
+    hand_type: HandType = HandType.RIGHT
+    """Type of hand to process"""
 
     debug: bool = False
     """Whether to run in debug mode"""
@@ -101,6 +106,7 @@ def main() -> None:
                     mask=mask,
                     cam_intrinsics=camera_intrinsics,
                     detector_hamer=detector_hamer,
+                    hand_type=args.hand_type,
                     debug=args.debug,
                 )
             except Exception as e:
