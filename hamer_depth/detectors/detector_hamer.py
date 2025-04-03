@@ -82,10 +82,16 @@ class DetectorHamer:
         bboxes, is_right, debug_bboxes = self.get_bboxes_for_hamer(
             img, img_mask, hand_type=hand_type
         )
-        scaled_focal_length, camera_center = self.get_image_params(img, camera_params)
+        scaled_focal_length, camera_center = self.get_image_params(
+            img=img, camera_params=camera_params
+        )
 
         dataset = ViTDetDataset(
-            self.model_cfg, img, bboxes, is_right, rescale_factor=self.rescale_factor
+            cfg=self.model_cfg,
+            img_cv2=img,
+            boxes=bboxes,
+            right=is_right,
+            rescale_factor=self.rescale_factor,
         )
         dataloader = torch.utils.data.DataLoader(
             dataset, batch_size=self.batch_size, shuffle=False, num_workers=0
