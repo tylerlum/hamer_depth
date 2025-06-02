@@ -104,6 +104,13 @@ def main() -> None:
         img_rgb = np.array(Image.open(rgb_path))
         img_depth = np.array(Image.open(depth_path))
         mask = np.array(Image.open(mask_path))
+        H, W, C = img_rgb.shape
+        assert C == 3, f"{C} != 3"
+        assert img_depth.shape == (H, W), f"{img_depth.shape} != ({H}, {W})"
+        assert mask.shape[:2] == (H, W), f"{mask.shape} != ({H}, {W})"
+        if mask.ndim == 3:
+            mask = mask[:, :, 0]
+        assert mask.ndim == 2, f"{mask.shape}"
 
         # Convert depth to meters
         img_depth = convert_depth_to_meters(img_depth)

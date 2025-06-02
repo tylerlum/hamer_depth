@@ -409,7 +409,7 @@ def process_image_with_hamer(
     # It is accurate in 2D space, but not in 3D space
     hamer_out = detector_hamer.detect_hand_keypoints(
         img=img_rgb,
-        img_mask=mask,
+        mask=mask,
         camera_params=cam_intrinsics,
         hand_type=hand_type,
     )

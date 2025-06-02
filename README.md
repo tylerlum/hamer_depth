@@ -20,12 +20,6 @@ Open the `setup.py` file and comment out the following lines:
         # 'torchvision',
 ```
 
-Next, open `vitpose_model.py` and replace `ROOT_DIR` with:
-
-```
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-```
-
 In order to visualize point clouds, you need to open `hamer/models/hamer.py` and set `init_renderer: bool = False` to ensure that HaMeR's visualizer doesn't cause errors with our open3d visualizer.
 
 If you want to use an earlier python version (e.g., 3.8), this will mostly work, but you will need to change a few lines of code in hamer. Specifically, run `git grep "|"` then replace them manually with either (type hints: `Union[..., ...]` and `from typing import Union`) or (`{**..., **...}` for merging dicts).

@@ -243,7 +243,7 @@ def get_point_cloud_of_segmask(
     Return the point cloud that corresponds to the segmentation mask in the depth image.
     Assume depth is in meters.
     """
-    idxs_y, idxs_x, _ = mask.nonzero()
+    idxs_y, idxs_x = mask.nonzero()
     depth_masked = depth_img[idxs_y, idxs_x]
     seg_points = get_3D_point_from_pixel(
         px=idxs_x, py=idxs_y, depth=depth_masked, intrinsics=intrinsics

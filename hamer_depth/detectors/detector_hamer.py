@@ -106,7 +106,7 @@ class DetectorHamer:
     def detect_hand_keypoints(
         self,
         img: np.ndarray,
-        img_mask: np.ndarray,
+        mask: np.ndarray,
         visualize: bool = False,
         visualize_3d: bool = False,
         pause_visualization: bool = True,
@@ -117,7 +117,7 @@ class DetectorHamer:
         Detect the hand keypoints in the image.
         """
         bboxes, is_right, debug_bboxes = self.get_bboxes_for_hamer(
-            img, img_mask, hand_type=hand_type
+            img=img, mask=mask, hand_type=hand_type
         )
         scaled_focal_length, camera_center = self.get_image_params(
             img=img, camera_params=camera_params
@@ -249,7 +249,7 @@ class DetectorHamer:
     def get_bboxes_for_hamer(
         self,
         img: np.ndarray,
-        img_mask: np.ndarray,
+        mask: np.ndarray,
         hand_type: HandType,
     ) -> Tuple[np.ndarray, np.ndarray, dict]:
         """
@@ -266,7 +266,7 @@ class DetectorHamer:
         )  # Turned detectron off cuz bad
 
         # Get sam bounding boxes
-        y_indices, x_indices = np.where(img_mask[:, :, 0])
+        y_indices, x_indices = np.where(mask)
         min_x = max(x_indices.min() - 5, 0)
         max_x = min(x_indices.max() + 5, img.shape[1] - 1)
         min_y = max(y_indices.min() - 5, 0)
