@@ -195,11 +195,10 @@ def get_3D_point_from_pixel(
 ) -> np.ndarray:
     """
     Convert pixel coordinates and depth to 3D point.
+    Assume depth is in meters.
     """
     x = (px - intrinsics["cx"]) / intrinsics["fx"]
     y = (py - intrinsics["cy"]) / intrinsics["fy"]
-
-    depth = depth / 1000
 
     X = x * depth
     Y = y * depth
@@ -216,6 +215,7 @@ def get_3D_points_from_pixels(
 ) -> np.ndarray:
     """
     Convert an array of pixel coordinates and depth map to 3D points.
+    Assume depth is in meters.
     """
     px = pixels_2d[:, 0]
     py = pixels_2d[:, 1]
@@ -223,7 +223,7 @@ def get_3D_points_from_pixels(
     x = (px - intrinsics["cx"]) / intrinsics["fx"]
     y = (py - intrinsics["cy"]) / intrinsics["fy"]
 
-    depth = depth_map[py, px] / 1000
+    depth = depth_map[py, px]
 
     X = x * depth
     Y = y * depth
@@ -241,10 +241,13 @@ def get_point_cloud_of_segmask(
 ) -> o3d.geometry.PointCloud:
     """
     Return the point cloud that corresponds to the segmentation mask in the depth image.
+    Assume depth is in meters.
     """
     idxs_y, idxs_x, _ = mask.nonzero()
     depth_masked = depth_img[idxs_y, idxs_x]
-    seg_points = get_3D_point_from_pixel(idxs_x, idxs_y, depth_masked, intrinsics)
+    seg_points = get_3D_point_from_pixel(
+        px=idxs_x, py=idxs_y, depth=depth_masked, intrinsics=intrinsics
+    )
     seg_colors = img[idxs_y, idxs_x, :] / 255.0  # Normalize to [0,1] for cv2
 
     pcd = get_pcd_from_points(seg_points, colors=seg_colors)
