@@ -62,7 +62,7 @@ def main() -> None:
     print(args)
     print("=" * 100)
 
-    rgb_paths = sorted(list((args.rgb_path).glob("*.jpg")))
+    rgb_paths = sorted(list((args.rgb_path).glob("*.png")))
     depth_paths = sorted(list((args.depth_path).glob("*.png")))
     mask_paths = sorted(list((args.mask_path).glob("*.png")))
     assert len(rgb_paths) == len(depth_paths) == len(mask_paths), (

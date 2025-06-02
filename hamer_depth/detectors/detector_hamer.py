@@ -19,13 +19,13 @@ from hamer.models import DEFAULT_CHECKPOINT, HAMER
 from hamer.utils import recursive_to
 from hamer.utils.geometry import perspective_projection
 from hamer.utils.renderer import cam_crop_to_full
-from vitpose_model import ViTPoseModel
 from yacs.config import CfgNode as CN
 
 from hamer_depth.detectors.detector_detectron2 import DetectorDetectron2
 from hamer_depth.detectors.detector_dino import DetectorDino
 from hamer_depth.utils.file_utils import get_parent_folder_of_package
 from hamer_depth.utils.hand_type import HandType
+from hamer_depth.utils.vitpose_model import ViTPoseModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

@@ -73,10 +73,9 @@ Other dependencies:
 pip install open3d transformers trimesh rtree tyro ruff
 ```
 
-
 ## Running
 
-First, download the demo data to data/demo/ to get:
+We will use the demo data in `data/demo/`:
 
 ```
 data/demo
@@ -97,7 +96,7 @@ data/demo
 
 Run script help info:
 ```
-python thirdparty/hamer_depth/run.py --help
+python run.py --help
 usage: run.py [-h] [OPTIONS]
 
 ╭─ options ────────────────────────────────────────────────────────────────────────────────────────╮
@@ -183,4 +182,40 @@ To format the code, run:
 ruff check --extend-select I --fix .; ruff format .
 ```
 
+## Running Continuously with ROS
+
+To run the hand pose estimation continuously with ROS, first set up ROS with RoboStack (https://robostack.github.io/GettingStarted.html):
+
+```
+mamba create -n hamer_depth_ros_env python=3.11
+mamba activate hamer_depth_ros_env
+
+# this adds the conda-forge channel to the new created environment configuration
+conda config --env --add channels conda-forge
+# and the robostack channel
+conda config --env --add channels robostack-staging
+# remove the defaults channel just in case, this might return an error if it is not in the list which is ok
+conda config --env --remove channels defaults
+
+mamba install ros-noetic-desktop
+```
+
+Then follow the installation instructions above.
+
+You may encounter the following error:
+```
+  File "/home/tylerlum/miniconda3/envs/hamer_depth_env_v3/lib/python3.11/site-packages/chumpy/ch.py", line 1203, in _depends_on
+    want_out = 'out' in inspect.getargspec(func).args
+                        ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'inspect' has no attribute 'getargspec'. Did you mean: 'getargs'?
+```
+
+To fix this, modify `/home/tylerlum/miniconda3/envs/hamer_depth_env_v3/lib/python3.11/site-packages/chumpy/ch.py` and replace `getargspec` with `getfullargspec`.
+
+Then run:
+```
+python hamer_depth_ros_node.py
+```
+
 Thanks to Marion Lepart and Jiaying Fang for writing most of this code!
+
