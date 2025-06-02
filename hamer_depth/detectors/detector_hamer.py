@@ -261,9 +261,14 @@ class DetectorHamer:
         is_right = np.array([hand_type == HandType.RIGHT])
 
         # Get dino bounding boxes
-        dino_bboxes, _dino_scores, debug_bboxes = self.get_bboxes(
-            img, use_dino=True, use_detectron=False
-        )  # Turned detectron off cuz bad
+        SKIP_DINO = True  # Set to True to not use DINO, just trust SAM mask
+        if not SKIP_DINO:
+            dino_bboxes, _dino_scores, debug_bboxes = self.get_bboxes(
+                img, use_dino=True, use_detectron=False
+            )  # Turned detectron off cuz bad
+        else:
+            dino_bboxes = np.array([])
+            debug_bboxes = {}
 
         # Get sam bounding boxes
         y_indices, x_indices = np.where(mask)
