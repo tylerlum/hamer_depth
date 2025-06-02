@@ -45,6 +45,17 @@ class Args:
     """Whether to ignore exceptions and continue processing the next image"""
 
 
+def convert_depth_to_meters(depth: np.ndarray) -> np.ndarray:
+    # depth is either in meters or millimeters
+    # Need to convert to meters
+    # If the max value is greater than 100, then it's likely in mm
+    in_mm = depth.max() > 100
+    if in_mm:
+        return depth / 1000
+    else:
+        return depth
+
+
 def main() -> None:
     args = tyro.cli(Args)
     print("=" * 100)
@@ -93,6 +104,9 @@ def main() -> None:
         img_rgb = np.array(Image.open(rgb_path))
         img_depth = np.array(Image.open(depth_path))
         mask = np.array(Image.open(mask_path))
+
+        # Convert depth to meters
+        img_depth = convert_depth_to_meters(img_depth)
 
         if args.ignore_exceptions:
             try:
