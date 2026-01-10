@@ -7,6 +7,7 @@ import open3d as o3d
 import trimesh
 from scipy.spatial import cKDTree
 from scipy.spatial.transform import Rotation as R
+from termcolor import colored
 
 from hamer_depth.detectors.detector_hamer import (
     INDEX_FINGER_VERTEX,
@@ -373,6 +374,10 @@ def process_image_with_hamer(
             RED
         )  # Initial hamer points to refine
         masked_hand_pcd.paint_uniform_color(GREEN)  # Real hand points to align to
+        print("Showing debug information for inputs to hamer depth refinement")
+        print(colored("RED: Initial hamer points to refine", "red"))
+        print(colored("GREEN: Masked hand points to align to", "green"))
+        print()
 
         visualize_geometries(
             width=img_rgb.shape[1],
@@ -416,6 +421,12 @@ def process_image_with_hamer(
         )  # Initial hamer points to refine
         masked_hand_pcd.paint_uniform_color(GREEN)  # Real hand points to align to
         aligned_hamer_pcd.paint_uniform_color(BLUE)  # Final aligned hamer points
+        print(
+            "Showing debug information for outputs and intermediate steps of hamer depth refinement"
+        )
+        print(colored("RED: Initial hamer points to refine", "red"))
+        print(colored("GREEN: Masked hand points to align to", "green"))
+        print(colored("BLUE: Final aligned hamer points", "blue"))
 
         initial_aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T_0)
         filtered_visible_hamer_pcd_inaccurate = get_pcd_from_points(
@@ -435,6 +446,19 @@ def process_image_with_hamer(
         filtered_visible_hamer_pcd_depth.paint_uniform_color(
             CYAN
         )  # Filtered hamer points refined with depth (used to compute initial estimate)
+        print(colored("YELLOW: Initial estimate of aligned hamer points", "yellow"))
+        print(
+            colored(
+                "MAGENTA: Filtered initial hamer points (used to compute initial estimate)",
+                "magenta",
+            )
+        )
+        print(
+            colored(
+                "CYAN: Filtered hamer points refined with depth (used to compute initial estimate)",
+                "cyan",
+            )
+        )
 
         visualize_geometries(
             width=img_rgb.shape[1],
