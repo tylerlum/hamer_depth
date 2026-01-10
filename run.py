@@ -76,9 +76,11 @@ def main() -> None:
     from hamer_depth.detectors.detector_hamer import (
         DetectorHamer,
     )
-    from hamer_depth.utils.run_utils import (
+    from hamer_depth.utils.cam_intrinsics_utils import (
         convert_intrinsics_matrix_to_dict,
         get_camera_matrix_from_file,
+    )
+    from hamer_depth.utils.run_utils import (
         process_image_with_hamer,
     )
 

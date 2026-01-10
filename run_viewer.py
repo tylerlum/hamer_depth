@@ -50,13 +50,13 @@ def main() -> None:
 
     # Put these imports here to avoid heavy import at the top
     # As this makes --help slow and ugly
+    from hamer_depth.utils.cam_intrinsics_utils import (
+        convert_intrinsics_matrix_to_dict,
+        get_camera_matrix_from_file,
+    )
     from hamer_depth.utils.pcd_utils import (
         get_point_cloud_of_segmask,
         visualize_geometries,
-    )
-    from hamer_depth.utils.run_utils import (
-        convert_intrinsics_matrix_to_dict,
-        get_camera_matrix_from_file,
     )
 
     # Get intrinsics

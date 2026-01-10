@@ -88,6 +88,32 @@ data/demo
 │   ├── ...
 ```
 
+To sanity check your data, we have a script that will visualize the point cloud:
+```
+python run_viewer.py --help
+usage: run_viewer.py [-h] [OPTIONS]
+
+╭─ options ──────────────────────────────────────────────────────────────────────────────────╮
+│ -h, --help              show this help message and exit                                    │
+│ --rgb-path PATH         Path to rgb images (required)                                      │
+│ --depth-path PATH       Path to depth images (required)                                    │
+│ --cam-intrinsics-path PATH                                                                 │
+│                         Path to 3x3 camera intrinsics txt file (required)                  │
+│ --only-idx {None}|INT   Index of image to process, only process this image (default: None) │
+╰────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+Run it with a specific index:
+
+```
+python run_viewer.py \
+--rgb-path data/demo/rgb \
+--depth-path data/demo/depth \
+--cam-intrinsics-path data/demo/cam_K.txt \
+--only-idx 100
+```
+
+
 Run script help info:
 ```
 python run.py --help
