@@ -8,6 +8,7 @@ import trimesh
 from scipy.spatial import cKDTree
 from scipy.spatial.transform import Rotation as R
 from termcolor import colored
+from copy import deepcopy
 
 from hamer_depth.detectors.detector_hamer import (
     INDEX_FINGER_VERTEX,
@@ -408,7 +409,7 @@ def process_image_with_hamer(
     )
 
     # Get the hand keypoints
-    hand_mesh_accurate = hand_mesh_inaccurate.apply_transform(T)
+    hand_mesh_accurate = deepcopy(hand_mesh_inaccurate).apply_transform(T)
     hand_keypoints_dict, hand_keypoints_pcd = get_hand_keypoints(
         mesh=hand_mesh_accurate,
     )
@@ -428,7 +429,7 @@ def process_image_with_hamer(
         print(colored("GREEN: Masked hand points to align to", "green"))
         print(colored("BLUE: Final aligned hamer points", "blue"))
 
-        initial_aligned_hamer_pcd = visible_hamer_pcd_inaccurate.transform(T_0)
+        initial_aligned_hamer_pcd = deepcopy(visible_hamer_pcd_inaccurate).transform(T_0)
         filtered_visible_hamer_pcd_inaccurate = get_pcd_from_points(
             filtered_visible_hamer_points_3d_inaccurate,
         )
