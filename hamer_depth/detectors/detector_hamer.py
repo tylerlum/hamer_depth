@@ -21,11 +21,8 @@ from hamer.utils.geometry import perspective_projection
 from hamer.utils.renderer import cam_crop_to_full
 from yacs.config import CfgNode as CN
 
-from hamer_depth.detectors.detector_detectron2 import DetectorDetectron2
-from hamer_depth.detectors.detector_dino import DetectorDino
 from hamer_depth.utils.file_utils import get_parent_folder_of_package
 from hamer_depth.utils.hand_type import HandType
-from hamer_depth.utils.vitpose_model import ViTPoseModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -95,11 +92,7 @@ class DetectorHamer:
         self.model.to(self.device)
         self.model.eval()
 
-        self.cpm = ViTPoseModel(self.device)
-
         # Load bounding box detectors
-        self.dino_detector = DetectorDino("IDEA-Research/grounding-dino-base")
-        self.detectron_detector = DetectorDetectron2(root_dir)
         self.faces_right = self.model.mano.faces
         self.faces_left = self.faces_right[:, [0, 2, 1]]
 
@@ -260,15 +253,7 @@ class DetectorHamer:
         )
         is_right = np.array([hand_type == HandType.RIGHT])
 
-        # Get dino bounding boxes
-        SKIP_DINO = True  # Set to True to not use DINO, just trust SAM mask
-        if not SKIP_DINO:
-            dino_bboxes, _dino_scores, debug_bboxes = self.get_bboxes(
-                img, use_dino=True, use_detectron=False
-            )  # Turned detectron off cuz bad
-        else:
-            dino_bboxes = np.array([])
-            debug_bboxes = {}
+        debug_bboxes = {}
 
         # Get sam bounding boxes
         y_indices, x_indices = np.where(mask)
@@ -280,74 +265,7 @@ class DetectorHamer:
 
         debug_bboxes["sam_bboxes"] = (sam_bboxes, np.array([1.0]))
 
-        if dino_bboxes.size == 0:
-            # If no DINO bounding boxes, use SAM
-            print("Dino and Detectron failed - using SAM")
-            return sam_bboxes, is_right, debug_bboxes
-
-        # Get the dino bounding box that has the highest IOU with the SAM bounding box
-        ious = [
-            calculate_iou(np.array(bbox), np.array(sam_bboxes[0]))
-            for bbox in dino_bboxes
-        ]
-        max_iou_idx = np.argmax(ious)
-        max_iou = ious[max_iou_idx]
-        if max_iou < 0.1:
-            # No good IOU, use SAM
-            return sam_bboxes, is_right, debug_bboxes
-
-        # Good IOU, use DINO bounding box with max IOU with SAM
-        return np.array([dino_bboxes[max_iou_idx]]), is_right, debug_bboxes
-
-    def get_bboxes(
-        self,
-        img: np.ndarray,
-        use_dino: bool = True,
-        use_detectron: bool = False,
-        visualize: bool = False,
-    ) -> Tuple[np.ndarray, np.ndarray, dict]:
-        """
-        Get bounding boxes around the hands using the Dino or Detectron detectors
-        """
-        debug_bboxes = {}
-
-        if use_dino:
-            dino_bboxes, dino_scores = self.dino_detector.get_bboxes(
-                img, "hand", threshold=0.8, visualize=visualize
-            )
-            debug_bboxes["dino_bboxes"] = (np.array(dino_bboxes), dino_scores)
-
-        if use_detectron:
-            det_bboxes, det_scores = self.detectron_detector.get_bboxes(
-                img, visualize=visualize
-            )
-            debug_bboxes["det_bboxes"] = (np.array(det_bboxes), det_scores)
-
-        if (use_dino and len(dino_bboxes) > 0) and (
-            use_detectron and len(det_bboxes) > 0
-        ):
-            bboxes = np.vstack([dino_bboxes, det_bboxes])
-            scores = np.concatenate([dino_scores, det_scores])
-        elif use_dino and dino_bboxes is not None:
-            bboxes, scores = np.array(dino_bboxes), np.array(dino_scores)
-        elif use_detectron and det_bboxes is not None:
-            bboxes, scores = det_bboxes, det_scores
-
-        if len(scores.shape) == 1:
-            scores = scores[:, None]
-
-        return bboxes, scores, debug_bboxes
-
-    def get_human_vitposes(
-        self, img: np.ndarray, bboxes: np.ndarray, scores: np.ndarray
-    ) -> list:
-        """
-        Get the human keypoints using the ViTPose model.
-        """
-        return self.cpm.predict_pose(
-            img,
-            [np.concatenate([bboxes, scores], axis=1)],
-        )
+        return sam_bboxes, is_right, debug_bboxes
 
     @staticmethod
     def _filter_bboxes_by_hand(
