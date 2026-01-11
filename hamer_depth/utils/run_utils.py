@@ -380,16 +380,37 @@ def process_image_with_hamer(
         print(colored("GREEN: Masked hand points to align to", "green"))
         print()
 
-        visualize_geometries(
-            width=img_rgb.shape[1],
-            height=img_rgb.shape[0],
-            cam_intrinsics=cam_intrinsics,
-            geometries=[
-                full_pcd,
-                masked_hand_pcd,
-                visible_hamer_pcd_inaccurate,
-            ],
+        import viser
+        server = viser.ViserServer()
+        @server.on_client_connect
+        def _(client: viser.ClientHandle) -> None:
+            client.camera.position = (0.0, 0.0, 0.0)
+            # client.camera.wxyz = (0, 0, 0, 1)
+            client.camera.look_at = (0, 0, 1)
+            client.camera.up_direction = (0, -1, 0)
+
+        points = np.asarray(full_pcd.points)      # shape (N, 3)
+        colors = np.asarray(full_pcd.colors)      # shape (N, 3), values in [0, 1]
+        print(f"points[0] = {points[0]}")
+        print(f"colors[0] = {colors[0]}")
+        print(f"len(points) = {len(points)}")
+        point_cloud_viser = server.scene.add_point_cloud(
+            "/point_cloud",
+            points=points,
+            colors=(colors * 255).astype(np.uint8),
+            point_size=0.01,
         )
+        breakpoint()
+        # visualize_geometries(
+        #     width=img_rgb.shape[1],
+        #     height=img_rgb.shape[0],
+        #     cam_intrinsics=cam_intrinsics,
+        #     geometries=[
+        #         full_pcd,
+        #         masked_hand_pcd,
+        #         visible_hamer_pcd_inaccurate,
+        #     ],
+        # )
 
     # Make initial transformation estimate
     (
