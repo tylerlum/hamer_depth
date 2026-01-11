@@ -120,14 +120,9 @@ def main() -> None:
         if args.ignore_exceptions:
             try:
                 (
-                    _,
                     hamer_out,
-                    _,
-                    _,
                     hand_keypoints_dict,
-                    _,
                     hand_mesh_accurate,
-                    _,
                 ) = process_image_with_hamer(
                     img_rgb=img_rgb,
                     img_depth=img_depth,
@@ -142,14 +137,9 @@ def main() -> None:
                 continue
         else:
             (
-                _,
                 hamer_out,
-                _,
-                _,
                 hand_keypoints_dict,
-                _,
                 hand_mesh_accurate,
-                _,
             ) = process_image_with_hamer(
                 img_rgb=img_rgb,
                 img_depth=img_depth,
