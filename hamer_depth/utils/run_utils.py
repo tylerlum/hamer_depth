@@ -64,7 +64,8 @@ def get_transformation_estimate(
 
     # HaMeR predictions' orientation should be very accurate, so if the ICP output is flipped, we use the initial prediction
     roll_pitch_yaw = np.absolute(R.from_matrix(T[:3, :3]).as_euler("xyz", degrees=True))
-    if (roll_pitch_yaw > 45).any():
+    MAX_ROLL_PITCH_YAW = 20
+    if (roll_pitch_yaw > MAX_ROLL_PITCH_YAW).any():
         print(
             f"ICP result has too much rotation, reverting to initial prediction: T = {T}, roll_pitch_yaw = {roll_pitch_yaw}"
         )
@@ -275,6 +276,9 @@ def process_image_with_hamer(
                 "masked_hand_pcd": masked_hand_pcd,  # 3D points of the masked hand
                 "visible_hamer_pcd": visible_hamer_pcd,  # Raw hamer prediction of points visible from the camera
             },
+            meshes={
+                "hand_mesh_inaccurate": hand_mesh_inaccurate,
+            },
         )
 
     # Align the inaccurate hand point cloud with the masked hand point cloud
@@ -336,6 +340,7 @@ def process_image_with_hamer(
         print("FINAL OUTPUT:")
         print(colored("BLUE: Final aligned hamer points", "blue"))
 
+        hand_mesh_initial_estimate = deepcopy(hand_mesh_inaccurate).apply_transform(T_0)
         visualize_geometries(
             width=img_rgb.shape[1],
             height=img_rgb.shape[0],
@@ -346,6 +351,11 @@ def process_image_with_hamer(
                 "visible_hamer_pcd": visible_hamer_pcd,  # Raw hamer prediction of points visible from the camera
                 "visible_hamer_pcd_initial_estimate": visible_hamer_pcd_initial_estimate,  # Initial estimate of aligned hamer points
                 "visible_hamer_pcd_aligned": visible_hamer_pcd_aligned,  # Final aligned hamer points
+            },
+            meshes={
+                "hand_mesh_inaccurate": hand_mesh_inaccurate,
+                "hand_mesh_initial_estimate": hand_mesh_initial_estimate,
+                "hand_mesh": hand_mesh,
             },
         )
 

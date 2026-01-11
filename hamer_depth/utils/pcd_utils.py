@@ -263,11 +263,12 @@ def visualize_geometries(
     height: int,
     cam_intrinsics: dict,
     geometries: Dict[str, o3d.geometry.Geometry],
+    meshes: Dict[str, trimesh.Trimesh],
     rescale_factor: float = 2.0,
     use_viser: bool = True,
 ):
     if use_viser:
-        visualize_geometries_viser(geometries=geometries)
+        visualize_geometries_viser(geometries=geometries, meshes=meshes)
     else:
         visualize_geometries_open3d(
             width=width,
@@ -278,7 +279,9 @@ def visualize_geometries(
         )
 
 
-def visualize_geometries_viser(geometries: Dict[str, o3d.geometry.Geometry]):
+def visualize_geometries_viser(
+    geometries: Dict[str, o3d.geometry.Geometry], meshes: Dict[str, trimesh.Trimesh]
+):
     import viser
 
     server = viser.ViserServer()
@@ -307,6 +310,12 @@ def visualize_geometries_viser(geometries: Dict[str, o3d.geometry.Geometry]):
             position=center,
             subdivisions=3,
             color=(colors * 255).astype(np.uint8)[0],
+        )
+    for name, mesh in meshes.items():
+        server.scene.add_mesh_simple(
+            f"/{name}",
+            vertices=mesh.vertices,
+            faces=mesh.faces,
         )
     breakpoint()
 
