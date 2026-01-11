@@ -258,13 +258,54 @@ def get_point_cloud_of_segmask(
     return pcd
 
 
+def visualize_geometries_viser(geometries: List[o3d.geometry.Geometry], names: Optional[List[str]] = None):
+    import viser
+    server = viser.ViserServer()
+    @server.on_client_connect
+    def _(client: viser.ClientHandle) -> None:
+        client.camera.position = (0.0, 0.0, 0.0)
+        # client.camera.wxyz = (0, 0, 0, 1)
+        client.camera.look_at = (0, 0, 1)
+        client.camera.up_direction = (0, -1, 0)
+
+    if names is not None:
+        assert len(names) == len(geometries), f"{len(names)} != {len(geometries)}"
+
+    for i,geom in enumerate(geometries):
+        name = names[i] if names is not None else f"point_cloud_{i}"
+        points = np.asarray(geom.points)      # shape (N, 3)
+        colors = np.asarray(geom.colors)      # shape (N, 3), values in [0, 1]
+        # center = np.mean(points, axis=0)
+        center = np.median(points, axis=0)
+        point_cloud_viser = server.scene.add_point_cloud(
+            f"/{name}",
+            points=points,
+            colors=(colors * 255).astype(np.uint8),
+            point_size=0.001,
+        )
+        center_viser = server.scene.add_icosphere(
+            f"/{name}_center",
+            radius=0.01,
+            position=center,
+            subdivisions=3,
+            color=(colors * 255).astype(np.uint8)[0],
+        )
+    breakpoint()
+
+
 def visualize_geometries(
     width: int,
     height: int,
     cam_intrinsics: dict,
     geometries: List[o3d.geometry.Geometry],
     rescale_factor: float = 2.0,
+    names: Optional[List[str]] = None,
 ):
+    USE_VISER = True
+    if USE_VISER:
+        visualize_geometries_viser(geometries=geometries, names=names)
+        return
+
     rescaled_width, rescaled_height = (
         int(width * rescale_factor),
         int(height * rescale_factor),
