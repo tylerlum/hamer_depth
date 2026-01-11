@@ -17,6 +17,7 @@ from hamer_depth.detectors.detector_hamer import (
     MIDDLE_FINGER_VERTEX,
     MIDDLE_KNUCKLE_VERTEX_BACK,
     MIDDLE_KNUCKLE_VERTEX_FRONT,
+    PINKY_FINGER_VERTEX,
     RING_FINGER_VERTEX,
     RING_KNUCKLE_VERTEX_BACK,
     RING_KNUCKLE_VERTEX_FRONT,
@@ -88,6 +89,7 @@ def get_hand_keypoints(
     index_pt = mesh.vertices[INDEX_FINGER_VERTEX]
     middle_pt = mesh.vertices[MIDDLE_FINGER_VERTEX]
     ring_pt = mesh.vertices[RING_FINGER_VERTEX]
+    pinky_pt = mesh.vertices[PINKY_FINGER_VERTEX]
     index_knuckle_front, index_knuckle_back = (
         mesh.vertices[INDEX_KNUCKLE_VERTEX_FRONT],
         mesh.vertices[INDEX_KNUCKLE_VERTEX_BACK],
@@ -119,6 +121,7 @@ def get_hand_keypoints(
             middle_pt,
             ring_pt,
             thumb_pt,
+            pinky_pt,
         ]
     )
     hand_keypoints = transform_pts(hand_keypoints, T)
@@ -136,6 +139,7 @@ def get_hand_keypoints(
         "middle_3": hand_keypoints[9],
         "ring_3": hand_keypoints[10],
         "thumb_3": hand_keypoints[11],
+        "pinky_3": hand_keypoints[12],
     }
     return hand_keypoints_dict, hand_keypoints_pcd
 
