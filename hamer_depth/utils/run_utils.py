@@ -2,6 +2,8 @@ import copy
 from copy import deepcopy
 from typing import Optional, Tuple
 
+import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 import trimesh
@@ -137,6 +139,55 @@ def get_hand_keypoints(
     return hand_keypoints_dict, hand_keypoints_pcd
 
 
+def create_annotated_img_with_keypoints(
+    hamer_out: dict,
+    T: np.ndarray,
+    cam_intrinsics: dict,
+    img_rgb: np.ndarray,
+) -> np.ndarray:
+    # --- NEW CODE START ---
+    # 1. Get the original 3D keypoints from HaMeR (Shape: 21x3)
+    # These are in the original "inaccurate" frame
+    original_kpts_3d = hamer_out["kpts_3d"]
+
+    # 2. Apply the transformation T to these points
+    # We need to use homogeneous coordinates for the matrix multiplication
+    # (x, y, z) -> (x, y, z, 1)
+    ones = np.ones((original_kpts_3d.shape[0], 1))
+    kpts_hom = np.hstack([original_kpts_3d, ones])  # Shape: 21x4
+
+    # Apply T: (21x4) @ (4x4).T -> (21x4)
+    # We transpose T because we are multiplying a row vector
+    transformed_kpts_hom = kpts_hom @ T.T
+
+    # Drop the 4th column to get back to (x, y, z)
+    refined_kpts_3d = transformed_kpts_hom[:, :3]
+
+    # 3. Project the new 3D points back to 2D
+    # Handle both Dict and Matrix intrinsics
+    if isinstance(cam_intrinsics, dict):
+        fx, fy = cam_intrinsics["fx"], cam_intrinsics["fy"]
+        cx, cy = cam_intrinsics["cx"], cam_intrinsics["cy"]
+    else:  # Assumes 3x3 matrix
+        fx, fy = cam_intrinsics[0, 0], cam_intrinsics[1, 1]
+        cx, cy = cam_intrinsics[0, 2], cam_intrinsics[1, 2]
+
+    refined_kpts_2d = np.zeros((refined_kpts_3d.shape[0], 2))
+    z_coords = refined_kpts_3d[:, 2]
+
+    # Simple pinhole projection
+    refined_kpts_2d[:, 0] = (refined_kpts_3d[:, 0] * fx / z_coords) + cx
+    refined_kpts_2d[:, 1] = (refined_kpts_3d[:, 1] * fy / z_coords) + cy
+
+    # 4. Create the new annotated image
+    refined_annotated_img_bgr = DetectorHamer.visualize_2d_kpt_on_img(
+        kpts_2d=refined_kpts_2d, img=img_rgb
+    )
+    refined_annotated_img = cv2.cvtColor(refined_annotated_img_bgr, cv2.COLOR_BGR2RGB)
+    # --- NEW CODE END ---
+    return refined_annotated_img
+
+
 def process_image_with_hamer(
     img_rgb: np.ndarray,
     img_depth: np.ndarray,
@@ -191,7 +242,19 @@ def process_image_with_hamer(
     )
     visible_hamer_pcd = get_pcd_from_points(visible_hamer_points_3d)
 
+    # Create annotated image with inaccurate hand keypoints
+    annotated_img_with_keypoints_inaccurate = create_annotated_img_with_keypoints(
+        hamer_out=hamer_out,
+        T=np.eye(4),
+        cam_intrinsics=cam_intrinsics,
+        img_rgb=img_rgb,
+    )
+
     if debug:
+        plt.imshow(annotated_img_with_keypoints_inaccurate.astype(np.uint8))
+        plt.title("Inaccurate Hand Keypoints")
+        plt.show()
+
         RED, GREEN = [1, 0, 0], [0, 1, 0]
 
         # Inputs
@@ -223,11 +286,30 @@ def process_image_with_hamer(
 
     # Get the hand keypoints
     hand_mesh = deepcopy(hand_mesh_inaccurate).apply_transform(T)
+    hand_keypoints_dict_inaccurate, hand_keypoints_pcd_inaccurate = get_hand_keypoints(
+        mesh=hand_mesh_inaccurate,
+    )
     hand_keypoints_dict, hand_keypoints_pcd = get_hand_keypoints(
         mesh=hand_mesh,
     )
 
+    annotated_img_with_keypoints = create_annotated_img_with_keypoints(
+        hamer_out=hamer_out,
+        T=T,
+        cam_intrinsics=cam_intrinsics,
+        img_rgb=img_rgb,
+    )
+
     if debug:
+        # Visualize the inaccurate and refined hand keypoints
+        fig, axes = plt.subplots(1, 2)
+        axes = axes.flatten()
+        axes[0].imshow(annotated_img_with_keypoints_inaccurate.astype(np.uint8))
+        axes[0].set_title("Inaccurate Hand Keypoints")
+        axes[1].imshow(annotated_img_with_keypoints.astype(np.uint8))
+        axes[1].set_title("Refined Hand Keypoints")
+        plt.show()
+
         RED, GREEN = [1, 0, 0], [0, 1, 0]
 
         # Inputs
