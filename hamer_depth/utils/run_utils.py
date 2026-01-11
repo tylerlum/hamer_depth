@@ -63,11 +63,11 @@ def get_transformation_estimate(
     )
 
     # HaMeR predictions' orientation should be very accurate, so if the ICP output is flipped, we use the initial prediction
-    roll_pitch_yaw = np.absolute(R.from_matrix(T[:3, :3]).as_euler("xyz", degrees=True))
-    MAX_ROLL_PITCH_YAW = 20
-    if (roll_pitch_yaw > MAX_ROLL_PITCH_YAW).any():
+    angle_deg = np.absolute(np.rad2deg(R.from_matrix(T[:3, :3]).magnitude()))
+    MAX_ANGLE_DEG = 35
+    if (angle_deg > MAX_ANGLE_DEG).any():
         print(
-            f"ICP result has too much rotation, reverting to initial prediction: T = {T}, roll_pitch_yaw = {roll_pitch_yaw}"
+            f"ICP result has too much rotation, reverting to initial prediction: T = {T}, angle_deg = {angle_deg}"
         )
         T = T_0
         aligned_source_pcd = copy.deepcopy(source_pcd).transform(T)
