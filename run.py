@@ -123,6 +123,8 @@ def main() -> None:
                     hamer_out,
                     hand_keypoints_dict,
                     hand_mesh_accurate,
+                    annotated_rgb_img_inaccurate,
+                    annotated_rgb_img,
                 ) = process_image_with_hamer(
                     img_rgb=img_rgb,
                     img_depth=img_depth,
@@ -140,6 +142,8 @@ def main() -> None:
                 hamer_out,
                 hand_keypoints_dict,
                 hand_mesh_accurate,
+                annotated_rgb_img_inaccurate,
+                annotated_rgb_img,
             ) = process_image_with_hamer(
                 img_rgb=img_rgb,
                 img_depth=img_depth,
@@ -156,8 +160,16 @@ def main() -> None:
         # Output mesh
         hand_mesh_accurate.export(args.out_path / f"{filename}.obj")
 
-        # Output annotated image
-        cv2.imwrite(args.out_path / f"{filename}.png", hamer_out["annotated_img"])
+        # Output annotated image (before and after side-by-side)
+        before_and_after_annotated_rgb_img = np.concatenate(
+            [annotated_rgb_img_inaccurate, annotated_rgb_img], axis=1
+        )
+        before_and_after_annotated_bgr_img = cv2.cvtColor(
+            before_and_after_annotated_rgb_img, cv2.COLOR_RGB2BGR
+        )
+        cv2.imwrite(
+            args.out_path / f"{filename}.png", before_and_after_annotated_bgr_img
+        )
 
         # Output json
         joint_poses = hamer_out["kpts_3d"]

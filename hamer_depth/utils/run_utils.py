@@ -196,7 +196,7 @@ def process_image_with_hamer(
     detector_hamer: DetectorHamer,
     hand_type: HandType = HandType.RIGHT,
     debug: bool = False,
-) -> Tuple[dict, dict, trimesh.Trimesh]:
+) -> Tuple[dict, dict, trimesh.Trimesh, np.ndarray, np.ndarray]:
     full_pcd = get_point_cloud_of_segmask(
         mask=np.ones_like(mask),
         depth_img=img_depth,
@@ -243,7 +243,7 @@ def process_image_with_hamer(
     visible_hamer_pcd = get_pcd_from_points(visible_hamer_points_3d)
 
     # Create annotated image with inaccurate hand keypoints
-    annotated_img_with_keypoints_inaccurate = create_annotated_img_with_keypoints(
+    annotated_rgb_img_inaccurate = create_annotated_img_with_keypoints(
         hamer_out=hamer_out,
         T=np.eye(4),
         cam_intrinsics=cam_intrinsics,
@@ -251,7 +251,7 @@ def process_image_with_hamer(
     )
 
     if debug:
-        plt.imshow(annotated_img_with_keypoints_inaccurate.astype(np.uint8))
+        plt.imshow(annotated_rgb_img_inaccurate.astype(np.uint8))
         plt.title("Inaccurate Hand Keypoints")
         plt.show()
 
@@ -293,7 +293,7 @@ def process_image_with_hamer(
         mesh=hand_mesh,
     )
 
-    annotated_img_with_keypoints = create_annotated_img_with_keypoints(
+    annotated_rgb_img = create_annotated_img_with_keypoints(
         hamer_out=hamer_out,
         T=T,
         cam_intrinsics=cam_intrinsics,
@@ -304,9 +304,9 @@ def process_image_with_hamer(
         # Visualize the inaccurate and refined hand keypoints
         fig, axes = plt.subplots(1, 2)
         axes = axes.flatten()
-        axes[0].imshow(annotated_img_with_keypoints_inaccurate.astype(np.uint8))
+        axes[0].imshow(annotated_rgb_img_inaccurate.astype(np.uint8))
         axes[0].set_title("Inaccurate Hand Keypoints")
-        axes[1].imshow(annotated_img_with_keypoints.astype(np.uint8))
+        axes[1].imshow(annotated_rgb_img.astype(np.uint8))
         axes[1].set_title("Refined Hand Keypoints")
         plt.show()
 
@@ -353,4 +353,6 @@ def process_image_with_hamer(
         hamer_out,
         hand_keypoints_dict,
         hand_mesh,
+        annotated_rgb_img_inaccurate,
+        annotated_rgb_img,
     )
