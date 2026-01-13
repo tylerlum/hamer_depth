@@ -187,6 +187,7 @@ def main() -> None:
             "middle_3",
             "ring_3",
             "thumb_3",
+            "pinky_3",
         ]
         frame_data = {}
         for j in joint_names:
