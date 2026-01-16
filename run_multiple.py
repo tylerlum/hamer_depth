@@ -1,7 +1,27 @@
-from run import run, HandType, Args
+from run import run as run_single, HandType, Args
+import subprocess
 from tqdm import tqdm
 from pathlib import Path
 
+def run(args: Args) -> None:
+    RUN_WITH_SAME_PROCESS = False  # Same process seems to OOM
+    if RUN_WITH_SAME_PROCESS:
+        run_single(args)
+    else:
+        cmd = (
+            "python run.py"
+            + f" --rgb-path {args.rgb_path}"
+            + f" --depth-path {args.depth_path}"
+            + f" --mask-path {args.mask_path}"
+            + f" --cam-intrinsics-path {args.cam_intrinsics_path}"
+            + f" --out-path {args.out_path}"
+            + f" --hand-type {args.hand_type}"
+            + (" --debug" if args.debug else "")
+            + (f" --only-idx {args.only_idx}" if args.only_idx is not None else "")
+            + (" --ignore-exceptions" if args.ignore_exceptions else "")
+        )
+        print(f"Running command: {cmd}")
+        subprocess.run(cmd, shell=True, check=True)
 """
 /juno/u/kedia/FoundationPose/human_videos/Jan_15
 ├── brush
