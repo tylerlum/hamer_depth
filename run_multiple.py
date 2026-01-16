@@ -1,4 +1,4 @@
-from run import run, HandType
+from run import run, HandType, Args
 from tqdm import tqdm
 from pathlib import Path
 
@@ -85,12 +85,14 @@ def main():
         cam_intrinsics_path = demo_dir / "cam_K.txt"
         out_path = demo_dir.parent / "hand_pose_trajectory"
         run(
-            rgb_path=rgb_path,
-            depth_path=depth_path,
-            mask_path=mask_path,
-            cam_intrinsics_path=cam_intrinsics_path,
-            out_path=out_path,
-            hand_type=HandType.LEFT,
+            Args(
+                rgb_path=rgb_path,
+                depth_path=depth_path,
+                mask_path=mask_path,
+                cam_intrinsics_path=cam_intrinsics_path,
+                out_path=out_path,
+                hand_type=HandType.LEFT,
+            )
         )
 
 if __name__ == "__main__":
