@@ -56,12 +56,7 @@ def convert_depth_to_meters(depth: np.ndarray) -> np.ndarray:
         return depth
 
 
-def main() -> None:
-    args = tyro.cli(Args)
-    print("=" * 100)
-    print(args)
-    print("=" * 100)
-
+def run(args: Args) -> None:
     rgb_paths = sorted(list((args.rgb_path).glob("*.png")))
     depth_paths = sorted(list((args.depth_path).glob("*.png")))
     mask_paths = sorted(list((args.mask_path).glob("*.png")))
@@ -181,6 +176,14 @@ def main() -> None:
         frame_data["global_orient"] = hamer_out["global_orient"].tolist()
         with open(args.out_path / f"{filename}.json", "w") as json_file:
             json.dump(frame_data, json_file, indent=4)
+
+
+def main() -> None:
+    args = tyro.cli(Args)
+    print("=" * 100)
+    print(args)
+    print("=" * 100)
+    run(args)
 
 
 if __name__ == "__main__":
