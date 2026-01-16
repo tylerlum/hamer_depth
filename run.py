@@ -117,27 +117,7 @@ def main() -> None:
         # Convert depth to meters
         img_depth = convert_depth_to_meters(img_depth)
 
-        if args.ignore_exceptions:
-            try:
-                (
-                    hamer_out,
-                    hand_keypoints_dict,
-                    hand_mesh_accurate,
-                    annotated_rgb_img_inaccurate,
-                    annotated_rgb_img,
-                ) = process_image_with_hamer(
-                    img_rgb=img_rgb,
-                    img_depth=img_depth,
-                    mask=mask,
-                    cam_intrinsics=camera_intrinsics,
-                    detector_hamer=detector_hamer,
-                    hand_type=args.hand_type,
-                    debug=args.debug,
-                )
-            except Exception as e:
-                print(f"Ignoring the following exception and continuing: {e}")
-                continue
-        else:
+        try:
             (
                 hamer_out,
                 hand_keypoints_dict,
@@ -153,6 +133,12 @@ def main() -> None:
                 hand_type=args.hand_type,
                 debug=args.debug,
             )
+        except Exception as e:
+            if args.ignore_exceptions:
+                print(f"Ignoring the following exception and continuing: {e}")
+                continue
+            else:
+                raise
 
         # Output folder
         args.out_path.mkdir(parents=True, exist_ok=True)
