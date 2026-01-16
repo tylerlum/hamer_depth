@@ -103,7 +103,7 @@ def main():
         depth_path = demo_dir / "depth"
         mask_path = demo_dir / "hand_mask"
         cam_intrinsics_path = demo_dir / "cam_K.txt"
-        out_path = demo_dir.parent / "hand_pose_trajectory"
+        out_path = demo_dir / "hand_pose_trajectory"
         run(
             Args(
                 rgb_path=rgb_path,
