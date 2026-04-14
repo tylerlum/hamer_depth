@@ -4,7 +4,100 @@ Hand pose estimation with HaMeR and RGB images, then improving the predictions w
 
 ## Installation
 
-### HaMeR
+### New Installation (Recommended, `uv`)
+
+This is the setup flow that was tested successfully on this repo.
+
+#### 1. Clone HaMeR and apply the small compatibility changes
+
+```
+cd ..
+git clone --recursive https://github.com/geopavlakos/hamer.git
+cd hamer
+```
+
+Open `setup.py` and comment out:
+
+```
+        # 'pytorch-lightning',
+        # 'torch',
+        # 'torchvision',
+```
+
+Open `hamer/models/hamer.py` and change:
+
+```
+    def __init__(self, cfg: CfgNode, init_renderer: bool = False):
+```
+
+#### 2. Create the `uv` environment in this repo
+
+```
+git clone https://github.com/tylerlum/hamer_depth.git
+cd hamer_depth
+
+uv venv --python 3.10 .venv
+source .venv/bin/activate
+```
+
+#### 3. Install this repo and runtime dependencies
+
+```
+uv pip install -e .
+uv pip install open3d transformers trimesh rtree tyro ruff viser numpy==1.24 matplotlib yacs opencv-python pillow tqdm webdataset pyrootutils hydra-colorlog xtcocotools pip "setuptools<81"
+uv pip install --index-url https://download.pytorch.org/whl/cu117 --extra-index-url https://pypi.org/simple torch==2.0.1 torchvision==0.15.2 pytorch-lightning==2.0.0
+uv pip install --no-build-isolation "chumpy @ git+https://github.com/mattloper/chumpy"
+uv pip install --no-deps -e ../hamer gdown scikit-image
+```
+
+Notes:
+- `detectron2` is not needed for the `run.py` path in this repo, so the setup above skips it.
+- `setuptools<81` avoids a `pkg_resources` issue in some of the older dependencies.
+
+#### 4. Download HaMeR pretrained assets
+
+From the top level `hamer` directory:
+
+```
+wget https://www.cs.utexas.edu/~pavlakos/hamer/data/hamer_demo_data.tar.gz
+tar --warning=no-unknown-keyword --exclude=".*" -xvf hamer_demo_data.tar.gz
+```
+
+This should create:
+
+```
+hamer/_DATA/hamer_ckpts/model_config.yaml
+hamer/_DATA/hamer_ckpts/checkpoints/hamer.ckpt
+```
+
+#### 5. Add the MANO model
+
+You need `MANO_RIGHT.pkl` at:
+
+```
+hamer/_DATA/data/mano/MANO_RIGHT.pkl
+```
+
+If you already have a MANO checkout somewhere else, copying the file over is enough.
+
+#### 6. Sanity check
+
+From the `hamer_depth` repo:
+
+```
+source .venv/bin/activate
+python run.py --help
+
+python run.py \
+--rgb-path data/demo/rgb \
+--depth-path data/demo/depth \
+--mask-path data/demo/hand_mask \
+--cam-intrinsics-path data/demo/cam_K.txt \
+--hand-type RIGHT \
+--out-path data/demo/hand_pose_trajectory_test
+```
+
+### HaMeR Installation (OLD)
 
 First we install [HaMeR](https://github.com/geopavlakos/hamer) with the following instructions. Note that these instructions are very similar to the original ones, but we make a few changes:
 
@@ -52,7 +145,7 @@ python demo.py \
     --full_frame
 ```
 
-### This repo
+### This Repo Installation (OLD)
 
 Next, install this repo by running this command in the top level hamer_depth directory.
 
@@ -93,23 +186,22 @@ Run script help info:
 python run.py --help
 usage: run.py [-h] [OPTIONS]
 
-╭─ options ────────────────────────────────────────────────────────────────────────────────────────╮
-│ -h, --help              show this help message and exit                                          │
-│ --rgb-path PATH         Path to rgb images (required)                                            │
-│ --depth-path PATH       Path to depth images (required)                                          │
-│ --mask-path PATH        Path to hand masks (required)                                            │
-│ --cam-intrinsics-path PATH                                                                       │
-│                         Path to 3x3 camera intrinsics txt file (required)                        │
-│ --out-path PATH         Path to save outputs to (default:                                        │
-│                         thirdparty/hamer_depth/outputs/2025-04-02_21-37-10)                      │
-│ --hand-type {LEFT,RIGHT}                                                                         │
-│                         Type of hand to process (default: RIGHT)                                 │
-│ --debug, --no-debug     Whether to run in debug mode (default: False)                            │
-│ --only-idx {None}|INT   Index of image to process, only process this image (default: None)       │
-│ --ignore-exceptions, --no-ignore-exceptions                                                      │
-│                         Whether to ignore exceptions and continue processing the next image      │
-│                         (default: False)                                                         │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ -h, --help           show this help message and exit                                                                        │
+│ --rgb-path PATH      Path to rgb images (required)                                                                          │
+│ --depth-path PATH    Path to depth images (required)                                                                        │
+│ --mask-path PATH     Path to hand masks (required)                                                                          │
+│ --cam-intrinsics-path PATH                                                                                                  │
+│                      Path to 3x3 camera intrinsics txt file (required)                                                      │
+│ --out-path PATH      Path to save outputs to (default: /home/tylerlum/github_repos/hamer_depth/outputs/2026-04-14_11-52-49) │
+│ --hand-type {LEFT,RIGHT}                                                                                                    │
+│                      Type of hand to process (default: RIGHT)                                                               │
+│ --debug, --no-debug  Whether to run in debug mode (default: False)                                                          │
+│ --only-idx {None}|INT                                                                                                       │
+│                      Index of image to process, only process this image (default: None)                                     │
+│ --ignore-exceptions, --no-ignore-exceptions                                                                                 │
+│                      Whether to ignore exceptions and continue processing the next image (default: False)                   │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 
@@ -120,6 +212,7 @@ python run.py \
 --depth-path data/demo/depth \
 --mask-path data/demo/hand_mask \
 --cam-intrinsics-path data/demo/cam_K.txt \
+--hand-type RIGHT \
 --out-path data/demo/hand_pose_trajectory
 ```
 
@@ -154,6 +247,7 @@ python run.py \
 --mask-path data/demo/hand_mask \
 --cam-intrinsics-path data/demo/cam_K.txt \
 --out-path data/demo/hand_pose_trajectory \
+--hand-type RIGHT \
 --debug \
 --only-idx 100
 ```
@@ -167,6 +261,7 @@ python run.py \
 --mask-path data/demo/hand_mask \
 --cam-intrinsics-path data/demo/cam_K.txt \
 --out-path data/demo/hand_pose_trajectory \
+--hand-type RIGHT \
 --ignore-exceptions
 ```
 
@@ -212,4 +307,3 @@ python hamer_depth_ros_node.py
 ```
 
 Thanks to Marion Lepart and Jiaying Fang for writing most of this code!
-
