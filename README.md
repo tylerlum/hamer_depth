@@ -126,8 +126,7 @@ usage: run.py [-h] [OPTIONS]
 │ --mask-path PATH        Path to hand masks (required)                                            │
 │ --cam-intrinsics-path PATH                                                                       │
 │                         Path to 3x3 camera intrinsics txt file (required)                        │
-│ --out-path PATH         Path to save outputs to (default:                                        │
-│                         thirdparty/hamer_depth/outputs/2025-04-02_21-37-10)                      │
+│ --out-path PATH         Path to save outputs to (default: outputs/<timestamp>)                   │
 │ --hand-type {LEFT,RIGHT}                                                                         │
 │                         Type of hand to process (default: RIGHT)                                 │
 │ --debug, --no-debug     Whether to run in debug mode (default: False)                            │
@@ -152,13 +151,33 @@ python run.py \
 This results in:
 ```
 data/demo/hand_pose_trajectory
-├── 00000.json
-├── 00000.obj
-├── 00000.png
-├── 00001.json
-├── 00001.obj
-├── 00001.png
+├── 000000.json
+├── 000000.obj
+├── 000000.png
+├── 000001.json
+├── 000001.obj
+├── 000001.png
 ├── ...
+```
+
+Each JSON file contains 3D keypoint positions (x, y, z in meters) and global orientation:
+```json
+{
+    "wrist_back":       [x, y, z],
+    "wrist_front":      [x, y, z],
+    "index_0_back":     [x, y, z],
+    "index_0_front":    [x, y, z],
+    "middle_0_back":    [x, y, z],
+    "middle_0_front":   [x, y, z],
+    "ring_0_back":      [x, y, z],
+    "ring_0_front":     [x, y, z],
+    "index_3":          [x, y, z],
+    "middle_3":         [x, y, z],
+    "ring_3":           [x, y, z],
+    "thumb_3":          [x, y, z],
+    "pinky_3":          [x, y, z],
+    "global_orient":    [[r00, r01, r02], [r10, r11, r12], [r20, r21, r22]]
+}
 ```
 
 The script assumes the hands are right hands. If you want to process left hands, run:
@@ -195,6 +214,14 @@ python run.py \
 --out-path data/demo/hand_pose_trajectory \
 --ignore-exceptions
 ```
+
+To run the script on multiple sequences in batch (uses subprocess per sequence to avoid OOM), edit `run_multiple.py` to list your sequence directories and run:
+
+```
+python run_multiple.py
+```
+
+Each sequence directory should have the same structure as `data/demo/` (rgb/, depth/, hand_mask/, cam_K.txt). Results are saved to `hand_pose_trajectory/` within each sequence directory.
 
 To format the code, run:
 
