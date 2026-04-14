@@ -262,7 +262,8 @@ class DetectorHamer:
 
         # Get dino bounding boxes
         SKIP_DINO = True  # Set to True to not use DINO, just trust SAM mask
-        if not SKIP_DINO:
+        attempted_dino = not SKIP_DINO
+        if attempted_dino:
             dino_bboxes, _dino_scores, debug_bboxes = self.get_bboxes(
                 img, use_dino=True, use_detectron=False
             )  # Turned detectron off cuz bad
@@ -281,8 +282,9 @@ class DetectorHamer:
         debug_bboxes["sam_bboxes"] = (sam_bboxes, np.array([1.0]))
 
         if dino_bboxes.size == 0:
-            # If no DINO bounding boxes, use SAM
-            print("Dino and Detectron failed - using SAM")
+            # If no DINO bounding boxes, use SAM.
+            if attempted_dino:
+                print("DINO found no usable hand boxes - using SAM")
             return sam_bboxes, is_right, debug_bboxes
 
         # Get the dino bounding box that has the highest IOU with the SAM bounding box
