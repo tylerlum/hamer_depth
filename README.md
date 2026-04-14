@@ -4,7 +4,102 @@ Hand pose estimation with HaMeR and RGB images, then improving the predictions w
 
 ## Installation
 
-### HaMeR
+### New Installation (Recommended, `uv`)
+
+This is the setup flow that was tested successfully on this repo.
+
+#### 1. Clone HaMeR and apply the small compatibility changes
+
+```
+cd ..
+git clone --recursive https://github.com/geopavlakos/hamer.git
+cd hamer
+```
+
+Open `setup.py` and comment out:
+
+```
+        # 'pytorch-lightning',
+        # 'torch',
+        # 'torchvision',
+```
+
+Open `hamer/models/hamer.py` and change the `__init__` signature to:
+
+```
+    def __init__(self, cfg: CfgNode, init_renderer: bool = False):
+```
+
+#### 2. Create the `uv` environment in this repo
+
+```
+git clone https://github.com/tylerlum/hamer_depth.git
+cd hamer_depth
+
+uv venv --python 3.10 .venv
+source .venv/bin/activate
+```
+
+#### 3. Install this repo and runtime dependencies
+
+```
+uv pip install -e .
+uv pip install open3d transformers trimesh rtree tyro ruff viser numpy==1.24 matplotlib yacs opencv-python pillow tqdm webdataset pyrootutils hydra-colorlog xtcocotools pip "setuptools<81"
+uv pip install --index-url https://download.pytorch.org/whl/cu117 --extra-index-url https://pypi.org/simple torch==2.0.1 torchvision==0.15.2 pytorch-lightning==2.0.0
+uv pip install --no-build-isolation "chumpy @ git+https://github.com/mattloper/chumpy"
+uv pip install --no-deps -e ../hamer gdown scikit-image
+uv pip install --no-build-isolation mmcv==1.5.0 -e ../hamer/third-party/ViTPose
+```
+
+Notes:
+- The final line installs the vendored `ViTPose` package plus a compatible `mmcv` into this repo's `uv` environment. This is required for the `run.py` path in this repo.
+- `detectron2` is not needed for the SAM-mask workflow in this repo, so the setup above skips it.
+- `setuptools<81` avoids a `pkg_resources` issue in some of the older dependencies.
+
+#### 4. Download HaMeR pretrained assets
+
+From the top-level `hamer` directory:
+
+```
+wget https://www.cs.utexas.edu/~pavlakos/hamer/data/hamer_demo_data.tar.gz
+tar --warning=no-unknown-keyword --exclude=".*" -xvf hamer_demo_data.tar.gz
+```
+
+This should create:
+
+```
+hamer/_DATA/hamer_ckpts/model_config.yaml
+hamer/_DATA/hamer_ckpts/checkpoints/hamer.ckpt
+```
+
+#### 5. Add the MANO model
+
+You need `MANO_RIGHT.pkl` at:
+
+```
+hamer/_DATA/data/mano/MANO_RIGHT.pkl
+```
+
+Please visit the [MANO website](https://mano.is.tue.mpg.de/) and register to get access to the downloads section. If you already have a MANO checkout somewhere else, copying the file over is enough.
+
+#### 6. Sanity check
+
+From the `hamer_depth` repo:
+
+```
+source .venv/bin/activate
+python run.py --help
+
+python run.py \
+--rgb-path data/demo/rgb \
+--depth-path data/demo/depth \
+--mask-path data/demo/hand_mask \
+--cam-intrinsics-path data/demo/cam_K.txt \
+--hand-type RIGHT \
+--out-path data/demo/hand_pose_trajectory_test
+```
+
+### HaMeR Installation (OLD, conda)
 
 First we install [HaMeR](https://github.com/geopavlakos/hamer) with the following instructions. Note that these instructions are very similar to the original ones, but we make a few changes:
 
@@ -38,7 +133,7 @@ pip install -v -e third-party/ViTPose
 bash fetch_demo_data.sh
 ```
 
-Besides these files, you also need to download the MANO model. Please visit the [MANO website](https://mano.is.tue.mpg.de/) and register to get access to the downloads section. We only require the right hand model. You need to put `MANO_RIGHT.pkl` under the `_DATA/data/mano folder`.
+Besides these files, you also need to download the MANO model. Please visit the [MANO website](https://mano.is.tue.mpg.de/) and register to get access to the downloads section. We only require the right hand model. You need to put `MANO_RIGHT.pkl` under the `_DATA/data/mano` folder.
 
 Test that HaMeR works by running:
 
@@ -52,7 +147,7 @@ python demo.py \
     --full_frame
 ```
 
-### This repo
+### This Repo Installation (OLD, conda)
 
 Next, install this repo by running this command in the top level hamer_depth directory.
 
