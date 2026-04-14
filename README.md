@@ -48,10 +48,13 @@ uv pip install open3d transformers trimesh rtree tyro ruff viser numpy==1.24 mat
 uv pip install --index-url https://download.pytorch.org/whl/cu117 --extra-index-url https://pypi.org/simple torch==2.0.1 torchvision==0.15.2 pytorch-lightning==2.0.0
 uv pip install --no-build-isolation "chumpy @ git+https://github.com/mattloper/chumpy"
 uv pip install --no-deps -e ../hamer gdown scikit-image
+uv pip install --no-build-isolation mmcv==1.5.0 -e ../hamer/third-party/ViTPose
 ```
 
 Notes:
-- `detectron2` is not needed for the `run.py` path in this repo, so the setup above skips it.
+- The final line installs the vendored `ViTPose` package plus a compatible `mmcv` into this repo's `uv` environment. This is required for the `run.py` path in this repo.
+- `detectron2` is not needed for the `run.py` SAM-mask workflow in this repo, so the setup above skips it.
+- `GroundingDINO` is also not required for the default SAM-mask workflow. If you later enable detector-based hand box proposals, install those extra dependencies separately.
 - `setuptools<81` avoids a `pkg_resources` issue in some of the older dependencies.
 
 #### 4. Download HaMeR pretrained assets
@@ -95,6 +98,27 @@ python run.py \
 --cam-intrinsics-path data/demo/cam_K.txt \
 --hand-type RIGHT \
 --out-path data/demo/hand_pose_trajectory_test
+```
+
+Tested one-frame command:
+
+```
+python run.py \
+--rgb-path /juno/u/kedia/FoundationPose/human_videos/Jan_17/spatula/spoon_spatula/flip_pancake/rgb \
+--depth-path /juno/u/kedia/FoundationPose/human_videos/Jan_17/spatula/spoon_spatula/flip_pancake/depth \
+--mask-path /juno/u/kedia/FoundationPose/human_videos/Jan_17/spatula/spoon_spatula/flip_pancake/hand_mask \
+--cam-intrinsics-path /juno/u/kedia/FoundationPose/human_videos/Jan_17/spatula/spoon_spatula/flip_pancake/cam_K.txt \
+--out-path /tmp/hamer_depth_flip_pancake_test \
+--hand-type RIGHT \
+--only-idx 0
+```
+
+This writes:
+
+```
+/tmp/hamer_depth_flip_pancake_test/frame_0000.json
+/tmp/hamer_depth_flip_pancake_test/frame_0000.obj
+/tmp/hamer_depth_flip_pancake_test/frame_0000.png
 ```
 
 ### HaMeR Installation (OLD)

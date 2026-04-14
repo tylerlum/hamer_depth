@@ -21,7 +21,6 @@ from hamer.utils.geometry import perspective_projection
 from hamer.utils.renderer import cam_crop_to_full
 from yacs.config import CfgNode as CN
 
-from hamer_depth.detectors.detector_detectron2 import DetectorDetectron2
 from hamer_depth.detectors.detector_dino import DetectorDino
 from hamer_depth.utils.file_utils import get_parent_folder_of_package
 from hamer_depth.utils.hand_type import HandType
@@ -98,8 +97,9 @@ class DetectorHamer:
         self.cpm = ViTPoseModel(self.device)
 
         # Load bounding box detectors
-        self.dino_detector = DetectorDino("IDEA-Research/grounding-dino-base")
-        self.detectron_detector = DetectorDetectron2(root_dir)
+        self.dino_detector = None
+        self.detectron_detector = None
+        self.root_dir = root_dir
         self.faces_right = self.model.mano.faces
         self.faces_left = self.faces_right[:, [0, 2, 1]]
 
@@ -312,12 +312,18 @@ class DetectorHamer:
         debug_bboxes = {}
 
         if use_dino:
+            if self.dino_detector is None:
+                self.dino_detector = DetectorDino("IDEA-Research/grounding-dino-base")
             dino_bboxes, dino_scores = self.dino_detector.get_bboxes(
                 img, "hand", threshold=0.8, visualize=visualize
             )
             debug_bboxes["dino_bboxes"] = (np.array(dino_bboxes), dino_scores)
 
         if use_detectron:
+            if self.detectron_detector is None:
+                from hamer_depth.detectors.detector_detectron2 import DetectorDetectron2
+
+                self.detectron_detector = DetectorDetectron2(self.root_dir)
             det_bboxes, det_scores = self.detectron_detector.get_bboxes(
                 img, visualize=visualize
             )
