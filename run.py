@@ -56,12 +56,7 @@ def convert_depth_to_meters(depth: np.ndarray) -> np.ndarray:
         return depth
 
 
-def main() -> None:
-    args = tyro.cli(Args)
-    print("=" * 100)
-    print(args)
-    print("=" * 100)
-
+def run(args: Args) -> None:
     rgb_paths = sorted(list((args.rgb_path).glob("*.png")))
     depth_paths = sorted(list((args.depth_path).glob("*.png")))
     mask_paths = sorted(list((args.mask_path).glob("*.png")))
@@ -164,8 +159,20 @@ def main() -> None:
         # Output mesh
         hand_mesh_accurate.export(args.out_path / f"{filename}.obj")
 
-        # Output annotated image
-        cv2.imwrite(args.out_path / f"{filename}.png", hamer_out["annotated_img"])
+        # Output annotated image (before and after side-by-side)
+        before_and_after_annotated_rgb_img = np.concatenate(
+            [
+                hamer_out["annotated_img_inaccurate_rgb"],
+                hamer_out["annotated_img_refined_rgb"],
+            ],
+            axis=1,
+        )
+        before_and_after_annotated_bgr_img = cv2.cvtColor(
+            before_and_after_annotated_rgb_img, cv2.COLOR_RGB2BGR
+        )
+        cv2.imwrite(
+            args.out_path / f"{filename}.png", before_and_after_annotated_bgr_img
+        )
 
         # Output json
         joint_poses = hamer_out["kpts_3d"]
@@ -183,6 +190,7 @@ def main() -> None:
             "middle_3",
             "ring_3",
             "thumb_3",
+            "pinky_3",
         ]
         frame_data = {}
         for j in joint_names:
@@ -190,6 +198,14 @@ def main() -> None:
         frame_data["global_orient"] = hamer_out["global_orient"].tolist()
         with open(args.out_path / f"{filename}.json", "w") as json_file:
             json.dump(frame_data, json_file, indent=4)
+
+
+def main() -> None:
+    args = tyro.cli(Args)
+    print("=" * 100)
+    print(args)
+    print("=" * 100)
+    run(args)
 
 
 if __name__ == "__main__":

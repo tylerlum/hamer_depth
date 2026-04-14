@@ -229,7 +229,7 @@ class HamerDepthROS:
         self, keypoints_dict: Dict[str, np.ndarray], orientation: np.ndarray
     ):
         keypoints = np.stack([v for v in keypoints_dict.values()], axis=0)
-        N_KEYPOINTS = 12
+        N_KEYPOINTS = 13
         assert keypoints.shape == (N_KEYPOINTS, 3), (
             f"keypoints.shape = {keypoints.shape}"
         )

@@ -2,6 +2,7 @@ import copy
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import cv2
 import networkx as nx
 import numpy as np
 import open3d as o3d
@@ -16,6 +17,7 @@ from hamer_depth.detectors.detector_hamer import (
     MIDDLE_FINGER_VERTEX,
     MIDDLE_KNUCKLE_VERTEX_BACK,
     MIDDLE_KNUCKLE_VERTEX_FRONT,
+    PINKY_FINGER_VERTEX,
     RING_FINGER_VERTEX,
     RING_KNUCKLE_VERTEX_BACK,
     RING_KNUCKLE_VERTEX_FRONT,
@@ -265,6 +267,7 @@ def get_hand_keypoints(
     index_pt = mesh.vertices[INDEX_FINGER_VERTEX]
     middle_pt = mesh.vertices[MIDDLE_FINGER_VERTEX]
     ring_pt = mesh.vertices[RING_FINGER_VERTEX]
+    pinky_pt = mesh.vertices[PINKY_FINGER_VERTEX]
     index_knuckle_front, index_knuckle_back = (
         mesh.vertices[INDEX_KNUCKLE_VERTEX_FRONT],
         mesh.vertices[INDEX_KNUCKLE_VERTEX_BACK],
@@ -296,6 +299,7 @@ def get_hand_keypoints(
             middle_pt,
             ring_pt,
             thumb_pt,
+            pinky_pt,
         ]
     )
     hand_keypoints = transform_pts(hand_keypoints, T)
@@ -313,8 +317,40 @@ def get_hand_keypoints(
         "middle_3": hand_keypoints[9],
         "ring_3": hand_keypoints[10],
         "thumb_3": hand_keypoints[11],
+        "pinky_3": hand_keypoints[12],
     }
     return hand_keypoints_dict, hand_keypoints_pcd
+
+
+def create_annotated_img_with_keypoints(
+    hamer_out: dict,
+    T: np.ndarray,
+    cam_intrinsics: dict,
+    img_rgb: np.ndarray,
+) -> np.ndarray:
+    original_kpts_3d = hamer_out["kpts_3d"]
+    ones = np.ones((original_kpts_3d.shape[0], 1))
+    kpts_hom = np.hstack([original_kpts_3d, ones])
+    transformed_kpts_hom = kpts_hom @ T.T
+    refined_kpts_3d = transformed_kpts_hom[:, :3]
+
+    if isinstance(cam_intrinsics, dict):
+        fx, fy = cam_intrinsics["fx"], cam_intrinsics["fy"]
+        cx, cy = cam_intrinsics["cx"], cam_intrinsics["cy"]
+    else:
+        fx, fy = cam_intrinsics[0, 0], cam_intrinsics[1, 1]
+        cx, cy = cam_intrinsics[0, 2], cam_intrinsics[1, 2]
+
+    refined_kpts_2d = np.zeros((refined_kpts_3d.shape[0], 2))
+    z_coords = refined_kpts_3d[:, 2]
+    refined_kpts_2d[:, 0] = (refined_kpts_3d[:, 0] * fx / z_coords) + cx
+    refined_kpts_2d[:, 1] = (refined_kpts_3d[:, 1] * fy / z_coords) + cy
+
+    refined_annotated_img_bgr = DetectorHamer.visualize_2d_kpt_on_img(
+        kpts_2d=refined_kpts_2d, img=img_rgb
+    )
+    refined_annotated_img = cv2.cvtColor(refined_annotated_img_bgr, cv2.COLOR_BGR2RGB)
+    return refined_annotated_img
 
 
 def visualize_geometries(
@@ -480,10 +516,25 @@ def process_image_with_hamer(
     )
 
     # Get the hand keypoints
-    hand_mesh_accurate = hand_mesh_inaccurate.apply_transform(T)
+    annotated_rgb_img_inaccurate = create_annotated_img_with_keypoints(
+        hamer_out=hamer_out,
+        T=np.eye(4),
+        cam_intrinsics=cam_intrinsics,
+        img_rgb=img_rgb,
+    )
+
+    hand_mesh_accurate = copy.deepcopy(hand_mesh_inaccurate).apply_transform(T)
     hand_keypoints_dict, hand_keypoints_pcd = get_hand_keypoints(
         mesh=hand_mesh_accurate,
     )
+    annotated_rgb_img = create_annotated_img_with_keypoints(
+        hamer_out=hamer_out,
+        T=T,
+        cam_intrinsics=cam_intrinsics,
+        img_rgb=img_rgb,
+    )
+    hamer_out["annotated_img_inaccurate_rgb"] = annotated_rgb_img_inaccurate
+    hamer_out["annotated_img_refined_rgb"] = annotated_rgb_img
 
     if debug:
         # Set colors
